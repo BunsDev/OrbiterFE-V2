@@ -51,7 +51,7 @@ if (otherNum > 2) {
 }
 
 const v1MakerConfigs = []
-const chain = isProd() ? chainMain : chainTest
+const chain = [...chainMain, ...chainTest]
 const chainConfig = [...chain].map((item) => {
   if (process.env[`VUE_APP_CHAIN_API_KEY_${item.internalId}`]) {
     item.api = item.api || {}

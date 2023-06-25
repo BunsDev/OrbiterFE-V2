@@ -839,6 +839,7 @@ export default {
                         memo
                     )
                     if (response.hash && response.status === 'processing') {
+                        console.log("send success", response.hash);
                         this.onTransferSucceed(
                             compatibleGlobalWalletConf.value.walletPayload
                                 .walletAddress,
@@ -849,6 +850,7 @@ export default {
                     }
                     this.transferLoading = false
                 } catch (error) {
+                    console.error('loopring transfer error', error);
                     this.transferLoading = false
                     if (error.message === 'account is not activated') {
                         // const notify =
