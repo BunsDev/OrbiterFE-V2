@@ -21,6 +21,7 @@ import {
   updatelpApiKey,
 } from '../../composition/hooks'
 import { compatibleGlobalWalletConf } from '../../composition/walletsResponsiveData'
+// import { LoopringAPI } from "@loopring-web/loopring-sdk/dist/";
 let configNet = config.loopring.Mainnet
 
 export default {
@@ -168,6 +169,12 @@ export default {
     } else {
       accInfo = accountResult?.accountInfo
     }
+    // const counterFactualInfo = await LoopringAPI.userAPI?.getCounterFactualInfo({accountId:accountResult?.accountInfo?.accountId})
+    // let isFactual = false;
+    // if (counterFactualInfo === undefined || !counterFactualInfo.walletOwner) {
+    //   isFactual = true;
+    // }
+
     if (
       accInfo.nonce == 0 &&
       accInfo.keyNonce == 0 &&
