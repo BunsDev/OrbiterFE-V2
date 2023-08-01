@@ -174,7 +174,7 @@ import Middle from '../../util/middle/middle'
 import { utils } from 'zksync'
 import { submitSignedTransactionsBatch } from 'zksync/build/wallet'
 import Web3 from 'web3'
-import { WALLETCONNECT } from '../../util/walletsDispatchers/constants'
+import { WALLETCONNECT, TOKEN_POCKET_APP } from '../../util/walletsDispatchers/constants'
 import { sendTransfer } from '../../util/constants/starknet/helper';
 import { getZkSyncProvider } from '../../util/zksync/zkysnc_helper'
 import loopring from '../../core/actions/loopring'
@@ -188,7 +188,7 @@ import * as ethers from 'ethers'
 import * as zksync2 from 'zksync-web3'
 import * as zksync from 'zksync'
 import walletDispatchers, {
-    METAMASK,
+    METAMASK
 } from '../../util/walletsDispatchers/index'
 import {
     walletIsLogin,
@@ -1256,7 +1256,7 @@ export default {
                     util.getMetaMaskNetworkId(fromChainID).toString()
                 ) {
                     if (
-                        compatibleGlobalWalletConf.value.walletType === METAMASK
+                        [METAMASK, WALLETCONNECT, TOKEN_POCKET_APP].includes(compatibleGlobalWalletConf.value.walletType)
                     ) {
                         try {
                             if (

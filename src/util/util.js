@@ -387,7 +387,9 @@ export default {
         decimals: chainInfo.nativeCurrency.decimals,
       },
       rpcUrls: chainInfo.rpc,
-      blockExplorerUrls: [env.networkUrl[chainId]],
+      blockExplorerUrls: env.networkUrl[chainId]
+        ? [env.networkUrl[chainId]]
+        : null,
     }
     try {
       await compatibleGlobalWalletConf.value.walletPayload.provider.request({

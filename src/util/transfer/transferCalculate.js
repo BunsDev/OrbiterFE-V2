@@ -102,6 +102,16 @@ const ZK2_ERC20_WITHDRAW_ONZK2 = 1111693 // same with eth
 const STARKNET_ETH_DEPOSIT_ONL1 = 110000
 const STARKNET_ETH_WITHDRAW_ONL1 = 60000
 
+// wi
+const BASE_ERC20_WITHDRAW_ONAR = 801420
+const BASE_ERC20_WITHDRAW_ONL1 = 234552
+const BASE_ETH_WITHDRAW_ONAR = 666721
+const BASE_ETH_WITHDRAW_ONL1 = 161063
+// depo
+const BASE_ERC20_DEPOSIT_DEPOSIT_ONL1 = 48485
+const BASE_ETH_DEPOSIT_DEPOSIT_ONL1 = 48485
+
+
 // scroll
 const SCROLL_ETH_DEPOSIT = 21000
 const SCROLL_ETH_WITHDRAW = 21000
@@ -338,6 +348,9 @@ export default {
     if (fromChainID === 10 || fromChainID === 510) {
       timeSpent = 15
     }
+    if (fromChainID === 21 || fromChainID === 521) {
+      timeSpent = 15
+    }
     if (
       fromChainID === 3 ||
       fromChainID === 33 ||
@@ -423,11 +436,27 @@ export default {
     if (toChainID === 519) {
       timeSpent += 6.828
     }
+    if (toChainID === 21 || toChainID === 521) {
+      timeSpent += 15
+    }
+    if (toChainID === 523 || toChainID === 23) {
+      timeSpent += 30
+    }
+    if (toChainID === 517 || toChainID === 17) {
+      timeSpent += 30
+    }
+
     const timeSpentStr = timeSpent + 's'
     return timeSpentStr
   },
 
   transferOrginTime(fromChainID, toChainID) {
+    if (fromChainID === 523 || fromChainID === 23) {
+      return '~24 hours'
+    }
+    if (fromChainID === 517 || fromChainID === 17) {
+      return '~6 hours'
+    }
     if (fromChainID === 2 || fromChainID === 22) {
       return '~7 days'
     }
@@ -435,6 +464,9 @@ export default {
       return '~24 hours'
     }
     if (fromChainID === 16 || fromChainID === 516) {
+      return '~7 days'
+    }
+    if (fromChainID === 21 || fromChainID === 521) {
       return '~7 days'
     }
     if (
@@ -477,6 +509,13 @@ export default {
     }
 
     if (fromChainID === 1 || fromChainID === 5) {
+      if (toChainID === 523 || toChainID === 23) {
+        return '~10min'
+      }
+      if (toChainID === 517 || toChainID === 17) {
+        return '~10min'
+      }
+
       if (toChainID === 2 || toChainID === 22) {
         //  eth ->  ar
         return '~10min'
@@ -527,10 +566,20 @@ export default {
       if (toChainID === 16 || toChainID === 516) {
         return '~10min'
       }
+      if (toChainID === 21 || toChainID === 521) {
+        return '~15min'
+      }
     }
   },
 
   transferSavingTime(fromChainID, toChainID) {
+    if (fromChainID === 523 || fromChainID === 23) {
+      return '24 hours'
+    }
+    if (fromChainID === 517 || fromChainID === 17) {
+      return '6 hours'
+    }
+
     if (fromChainID === 2 || fromChainID === 22) {
       return ' 7 days'
     }
@@ -563,10 +612,23 @@ export default {
     if (fromChainID === 16 || fromChainID === 516) {
       return ' 7 days'
     }
+
+    if (fromChainID === 21 || fromChainID === 521) {
+      return ' 7 days'
+    }
     if (fromChainID === 1 || fromChainID === 5) {
       if (toChainID === 2 || toChainID === 22) {
         //  eth ->  ar
         return ' 9.25min'
+      }
+      if (toChainID === 523 || toChainID === 23) {
+        return '10min'
+      }
+      if (toChainID === 517 || toChainID === 17) {
+        return '10min'
+      }
+      if (toChainID === 21 || toChainID === 521) {
+        return '10min'
       }
       if (
         toChainID === 3 ||
@@ -642,6 +704,17 @@ export default {
       } catch (error) {
         throw new Error('ar withdraw error')
       }
+    }
+    if (fromChainID === 21 || fromChainID === 521) {
+      // base w
+      const fromGasPrice = await this.getGasPrice(fromChainID)
+      const l2Fee = fromGasPrice * (isErc20  ? BASE_ERC20_WITHDRAW_ONAR : BASE_ETH_WITHDRAW_ONAR);
+      // l1 w
+      const L1ChainID = fromChainID === 21 ? 1 : 5
+      const L1GasPrice = await this.getGasPrice(L1ChainID)
+      const l1Fee = L1GasPrice * (isErc20  ? BASE_ERC20_WITHDRAW_ONL1 : BASE_ETH_WITHDRAW_ONL1);
+      ethGas = l2Fee + l1Fee
+
     }
 
     if (fromChainID === 3 || fromChainID === 33) {
@@ -831,6 +904,16 @@ export default {
       } catch (error) {
         throw new Error('ar deposit error')
       }
+    }
+    if (toChainID ==21 || toChainID == 521) {
+      const toGasPrice = await this.getGasPrice(toChainID === 2 ? 1 : 5)
+      const arDepositGas =
+        toGasPrice *
+        (isErc20
+          ? BASE_ERC20_DEPOSIT_DEPOSIT_ONL1
+          : BASE_ETH_DEPOSIT_DEPOSIT_ONL1)
+      ethGas += arDepositGas
+
     }
     if (toChainID === 3 || toChainID === 33) {
       try {

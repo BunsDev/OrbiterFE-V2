@@ -364,8 +364,8 @@ import {
   walletIsLogin,
   compatibleGlobalWalletConf,
 } from '../../composition/walletsResponsiveData'
-import walletDispatchers from '../../util/walletsDispatchers'
-import { METAMASK } from '../../util/walletsDispatchers/index'
+import walletDispatchers, { TOKEN_POCKET_APP } from '../../util/walletsDispatchers'
+import { METAMASK, WALLETCONNECT } from '../../util/walletsDispatchers/index'
 import {
   isMobile,
   transferDataState,
@@ -1538,28 +1538,20 @@ export default {
         //   });
         //   return;
         // }
-        if (toChainID === 4 && fromChain.symbol == 'DAI') {
+        if (fromChainID === 7 && toChainID === 4) {
           this.$notify.error({
-            title: `The StarkNet network transaction maintenance, please try again later`,
-            duration: 6000,
+              title: `The optimism-starkNet network transaction maintenance, please try again later`,
+              duration: 3000,
           });
           return;
         }
-        // if (fromChainID === 7 && toChainID === 4) {
-        //   this.$notify.error({
-        //       title: `The optimism-starkNet network transaction maintenance, please try again later`,
-        //       duration: 3000,
-        //   });
-        //   return;
-        // }
         // if (toChainID === 14 || fromChainID === 14) {
         //   this.$notify.error({
-        //     title: `The Zksync Era network transaction maintenance, please try again later`,
+        //     title: `The zkSync Era network transaction maintenance, please try again later`,
         //     duration: 6000,
         //   });
         //   return;
         // }
-        
         if (nonce > 8999) {
           this.$notify.error({
             title: `Address with the nonce over 9000 are not supported by Orbiter`,
@@ -1620,7 +1612,7 @@ export default {
           }
         } else {
           if (+compatibleGlobalWalletConf.value.walletPayload.networkId !== util.getMetaMaskNetworkId(fromChainID)) {
-            if (compatibleGlobalWalletConf.value.walletType === METAMASK) {
+            if ([METAMASK, WALLETCONNECT, TOKEN_POCKET_APP].includes(compatibleGlobalWalletConf.value.walletType)) {
               try {
                 if (!await util.ensureWalletNetwork(fromChainID)) {
                   return;
