@@ -7,7 +7,7 @@ import {
   generateKeyPair,
   UserAPI,
   OffchainFeeReqType,
-  sleep,
+  sleep
   //   WhitelistedUserAPI,
 } from '@loopring-web/loopring-sdk'
 import axios from 'axios'
@@ -21,7 +21,6 @@ import {
   updatelpApiKey,
 } from '../../composition/hooks'
 import { compatibleGlobalWalletConf } from '../../composition/walletsResponsiveData'
-// import { LoopringAPI } from "@loopring-web/loopring-sdk/dist/";
 let configNet = config.loopring.Mainnet
 
 export default {
@@ -127,6 +126,7 @@ export default {
     try {
       const exchangeApi = this.getExchangeAPI(localChainID)
       const response = await exchangeApi.getAccount({ owner: address })
+      console.log("exchangeApi.getAccount",response)
       if (response.accInfo && response.raw_data) {
         const info = {
           accountInfo: response.accInfo,
@@ -169,11 +169,10 @@ export default {
     } else {
       accInfo = accountResult?.accountInfo
     }
-    // const counterFactualInfo = await LoopringAPI.userAPI?.getCounterFactualInfo({accountId:accountResult?.accountInfo?.accountId})
-    // let isFactual = false;
-    // if (counterFactualInfo === undefined || !counterFactualInfo.walletOwner) {
-    //   isFactual = true;
-    // }
+    console.log('accountId', accInfo?.accountId);
+    const info = await userApi?.getCounterFactualInfo({ accountId: accountResult?.accountInfo?.accountId });
+    console.log("counterFactualInfo", info?.counterFactualInfo);
+    const isCounterFactual = !!info?.counterFactualInfo?.walletOwner;
 
     if (
       accInfo.nonce == 0 &&
@@ -204,12 +203,17 @@ export default {
       walletType: ConnectorNames.MetaMask,
       chainId: localChainID == 99 ? ChainId.GOERLI : ChainId.MAINNET,
     }
+    if (isCounterFactual) {
+      Object.assign(options, { accountId: accInfo?.accountId });
+    }
 
+    console.log("options", options);
     const eddsaKey = await generateKeyPair(options)
 
     const GetUserApiKeyRequest = {
-      accountId: accInfo.accountId,
+      accountId: accInfo.accountId
     }
+    console.log('GetUserApiKeyRequest', GetUserApiKeyRequest);
     const { apiKey } = await userApi.getUserApiKey(
       GetUserApiKeyRequest,
       eddsaKey.sk

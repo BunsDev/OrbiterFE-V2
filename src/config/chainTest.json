@@ -579,5 +579,26 @@
       }
     ],
     "infoURL": "https://www.okx.com/explorer/okbc-test"
+  },
+  {
+    "api": {
+      "url": "https://uat2.loopring.io/api/v3",
+      "key": ""
+    },
+    "chainId": "loopring_testnet",
+    "networkId": "5",
+    "internalId": "99",
+    "name": "Loopring(R)",
+    "nativeCurrency": {
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "decimals": 18,
+      "id": 0,
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    "rpc": [],
+    "watch": ["api"],
+    "contracts": [],
+    "tokens": []
   }
 ]
