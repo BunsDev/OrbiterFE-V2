@@ -169,8 +169,9 @@ export default {
     } else {
       accInfo = accountResult?.accountInfo
     }
-    console.log('accountId', accInfo?.accountId);
-    const info = await userApi?.getCounterFactualInfo({ accountId: accountResult?.accountInfo?.accountId });
+    const accountId = accInfo?.accountId;
+    console.log('accountId', accountId);
+    const info = await userApi?.getCounterFactualInfo({ accountId });
     console.log("counterFactualInfo", info?.counterFactualInfo);
     const isCounterFactual = !!info?.counterFactualInfo?.walletOwner;
 
@@ -204,14 +205,14 @@ export default {
       chainId: localChainID == 99 ? ChainId.GOERLI : ChainId.MAINNET,
     }
     if (isCounterFactual) {
-      Object.assign(options, { accountId: accInfo?.accountId });
+      Object.assign(options, { accountId });
     }
 
     console.log("options", options);
     const eddsaKey = await generateKeyPair(options)
 
     const GetUserApiKeyRequest = {
-      accountId: accInfo.accountId
+      accountId
     }
     console.log('GetUserApiKeyRequest', GetUserApiKeyRequest);
     const { apiKey } = await userApi.getUserApiKey(
@@ -225,7 +226,7 @@ export default {
     // step 3 get storageId
     const lpTokenInfo = await this.getLpTokenInfo(localChainID, tokenAddress)
     const GetNextStorageIdRequest = {
-      accountId: accInfo.accountId,
+      accountId,
       sellTokenId: lpTokenInfo.tokenId,
     }
     const storageId = await userApi.getNextStorageId(
@@ -237,7 +238,7 @@ export default {
     const OriginTransferRequestV3 = {
       exchange: exchangeInfo.exchangeAddress,
       payerAddr: address,
-      payerId: accInfo.accountId,
+      payerId: accountId,
       payeeAddr: toAddress,
       payeeId: toAddressID,
       storageId: storageId.offchainId,
@@ -252,7 +253,15 @@ export default {
       validUntil: ts,
       memo,
     }
-    const response = await userApi.submitInternalTransfer({
+    const response = isCounterFactual ? await userApi.submitInternalTransfer({
+      request: OriginTransferRequestV3,
+      web3,
+      chainId: localChainID == 99 ? ChainId.GOERLI : ChainId.MAINNET,
+      walletType: ConnectorNames.MetaMask,
+      eddsaKey: eddsaKey.sk,
+      apiKey,
+      isHWAddr: false,
+    }, { accountId, counterFactualInfo: info.counterFactualInfo }) : await userApi.submitInternalTransfer({
       request: OriginTransferRequestV3,
       web3,
       chainId: localChainID == 99 ? ChainId.GOERLI : ChainId.MAINNET,
@@ -261,6 +270,7 @@ export default {
       apiKey,
       isHWAddr: false,
     })
+    console.log("submitInternalTransfer response", response);
     return response
   },
 
