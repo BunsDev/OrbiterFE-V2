@@ -7,16 +7,17 @@ const storeUpdateProceedState = (state) => {
   store.commit('updateProceedState', state)
 }
 
-let cron;
+let cron
 
 function confirmUserTransaction(hash) {
-  let currentStatus = 1;
+  let currentStatus = 1
   if (cron) {
-    clearInterval(cron);
+    clearInterval(cron)
   }
-   cron = setInterval(async () => {
+  cron = setInterval(async () => {
     try {
-      const { status, txList = [] } = await openApiAx.get(`/status?hash=${hash}`) || {}
+      const { status, txList = [] } =
+        (await openApiAx.get(`/status?hash=${hash}`)) || {}
       util.log('txStatus', status, 'txList', txList)
       switch (status) {
         case 0: {
@@ -55,16 +56,16 @@ function confirmUserTransaction(hash) {
     } catch (e) {
       console.error(e)
     }
-  }, 10 * 1000);
+  }, 10 * 1000)
 }
 
 export default {
   UserTransferReady(user, maker, amount, localChainID, txHash) {
     if (localChainID === 4 || localChainID === 44) {
-      txHash = util.starknetHashFormat(txHash);
+      txHash = util.starknetHashFormat(txHash)
     }
     if (localChainID === 3 || localChainID === 33) {
-      txHash = txHash.replace('sync-tx:', '0x');
+      txHash = txHash.replace('sync-tx:', '0x')
     }
     store.commit('updateProceedTxID', txHash)
     store.commit('updateProceedingUserTransferFrom', user)

@@ -111,7 +111,6 @@ const BASE_ETH_WITHDRAW_ONL1 = 161063
 const BASE_ERC20_DEPOSIT_DEPOSIT_ONL1 = 48485
 const BASE_ETH_DEPOSIT_DEPOSIT_ONL1 = 48485
 
-
 // scroll
 const SCROLL_ETH_DEPOSIT = 21000
 const SCROLL_ETH_WITHDRAW = 21000
@@ -708,13 +707,16 @@ export default {
     if (fromChainID === 21 || fromChainID === 521) {
       // base w
       const fromGasPrice = await this.getGasPrice(fromChainID)
-      const l2Fee = fromGasPrice * (isErc20  ? BASE_ERC20_WITHDRAW_ONAR : BASE_ETH_WITHDRAW_ONAR);
+      const l2Fee =
+        fromGasPrice *
+        (isErc20 ? BASE_ERC20_WITHDRAW_ONAR : BASE_ETH_WITHDRAW_ONAR)
       // l1 w
       const L1ChainID = fromChainID === 21 ? 1 : 5
       const L1GasPrice = await this.getGasPrice(L1ChainID)
-      const l1Fee = L1GasPrice * (isErc20  ? BASE_ERC20_WITHDRAW_ONL1 : BASE_ETH_WITHDRAW_ONL1);
+      const l1Fee =
+        L1GasPrice *
+        (isErc20 ? BASE_ERC20_WITHDRAW_ONL1 : BASE_ETH_WITHDRAW_ONL1)
       ethGas = l2Fee + l1Fee
-
     }
 
     if (fromChainID === 3 || fromChainID === 33) {
@@ -905,7 +907,7 @@ export default {
         throw new Error('ar deposit error')
       }
     }
-    if (toChainID ==21 || toChainID == 521) {
+    if (toChainID == 21 || toChainID == 521) {
       const toGasPrice = await this.getGasPrice(toChainID === 2 ? 1 : 5)
       const arDepositGas =
         toGasPrice *
@@ -913,7 +915,6 @@ export default {
           ? BASE_ERC20_DEPOSIT_DEPOSIT_ONL1
           : BASE_ETH_DEPOSIT_DEPOSIT_ONL1)
       ethGas += arDepositGas
-
     }
     if (toChainID === 3 || toChainID === 33) {
       try {
