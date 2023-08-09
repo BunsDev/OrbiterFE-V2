@@ -1,12 +1,3 @@
-import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
-import { Web3Modal } from '@web3modal/html'
-import {
-  configureChains,
-  createConfig,
-  sendTransaction,
-  switchNetwork as switchChain,
-} from '@wagmi/core'
-import * as chainsModule from '@wagmi/core/chains'
 import { userDeniedMessage, showMessage } from '../../constants/web3/getWeb3'
 import {
   globalSelectWalletConf,
@@ -18,6 +9,33 @@ import util from '../../util'
 import { updateCoinbase } from '../../../composition/useCoinbase'
 import { transferDataState } from '../../../composition/useTransferData'
 import config from '../../../config'
+const EthereumClient = function () {
+
+}
+const w3mConnectors = function () {
+
+}
+const w3mProvider = function () {
+
+}
+const Web3Modal = function () {
+
+}
+const chainsModule = function () {
+
+}
+const configureChains = function () {
+  
+    }
+    const createConfig = function () {
+      
+        }
+    const sendTransaction = function () {
+      
+        }
+const switchChain = function () {
+  
+};
 
 let connector = null // when walletconnect connect success, connector will be assigned connector instance
 // this hof helps the following functions to throw errors

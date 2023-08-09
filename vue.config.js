@@ -17,22 +17,6 @@ module.exports = {
             args[0].title = 'Orbiter'
             return args
         })
-        config.module
-        .rule('walletconnect')
-        .test(/\.js$/)
-        .include
-        .add(resolve('node_modules/@walletconnect'))
-        .add(resolve('node_modules/viem'))
-        .add(resolve('node_modules/@wagmi'))
-        .add(resolve('node_modules/@web3modal'))
-        .add(resolve('node_modules/@noble'))
-        .end()
-        .use('babel-loader')
-        .loader('babel-loader')
-        .options({
-            plugins: [NullishCoalescingOperatorPlugin],
-        })
-        .end()
         config.externals({
             web3: 'Web3',
         })
