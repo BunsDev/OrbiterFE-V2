@@ -121,6 +121,7 @@ export default {
   },
   methods: {
     performInitCurrentLoginWallet() {
+      console.log('v 1.0.0 =====')
       performInitMobileAppWallet()
 
       getZksToken.getSupportZksTokenList()
