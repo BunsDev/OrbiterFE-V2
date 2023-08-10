@@ -1,0 +1,621 @@
+diff --git a/node_modules/@web3modal/core/dist/index.js b/node_modules/@web3modal/core/dist/index.js
+index f87345c..6de4a6f 100644
+--- a/node_modules/@web3modal/core/dist/index.js
++++ b/node_modules/@web3modal/core/dist/index.js
+@@ -1,2 +1,614 @@
+-import{proxy as g,subscribe as f,snapshot as R}from"valtio/vanilla";const o=g({history:["ConnectWallet"],view:"ConnectWallet",data:void 0}),W={state:o,subscribe(e){return f(o,()=>e(o))},push(e,t){e!==o.view&&(o.view=e,t&&(o.data=t),o.history.push(e))},reset(e){o.view=e,o.history=[e]},replace(e){o.history.length>1&&(o.history[o.history.length-1]=e,o.view=e)},goBack(){if(o.history.length>1){o.history.pop();const[e]=o.history.slice(-1);o.view=e}},setData(e){o.data=e}},i={WALLETCONNECT_DEEPLINK_CHOICE:"WALLETCONNECT_DEEPLINK_CHOICE",W3M_VERSION:"W3M_VERSION",W3M_PREFER_INJECTED_URL_FLAG:"w3mPreferInjected",RECOMMENDED_WALLET_AMOUNT:9,isMobile(){return typeof window<"u"?Boolean(window.matchMedia("(pointer:coarse)").matches||/Android|webOS|iPhone|iPad|iPod|BlackBerry|Opera Mini/u.test(navigator.userAgent)):!1},isAndroid(){return i.isMobile()&&navigator.userAgent.toLowerCase().includes("android")},isIos(){const e=navigator.userAgent.toLowerCase();return i.isMobile()&&(e.includes("iphone")||e.includes("ipad"))},isHttpUrl(e){return e.startsWith("http://")||e.startsWith("https://")},isArray(e){return Array.isArray(e)&&e.length>0},formatNativeUrl(e,t,n){if(i.isHttpUrl(e))return this.formatUniversalUrl(e,t,n);let s=e;s.includes("://")||(s=e.replaceAll("/","").replaceAll(":",""),s=`${s}://`),s.endsWith("/")||(s=`${s}/`),this.setWalletConnectDeepLink(s,n);const r=encodeURIComponent(t);return`${s}wc?uri=${r}`},formatUniversalUrl(e,t,n){if(!i.isHttpUrl(e))return this.formatNativeUrl(e,t,n);let s=e;s.endsWith("/")||(s=`${s}/`),this.setWalletConnectDeepLink(s,n);const r=encodeURIComponent(t);return`${s}wc?uri=${r}`},async wait(e){return new Promise(t=>{setTimeout(t,e)})},openHref(e,t){window.open(e,t,"noreferrer noopener")},setWalletConnectDeepLink(e,t){try{localStorage.setItem(i.WALLETCONNECT_DEEPLINK_CHOICE,JSON.stringify({href:e,name:t}))}catch{console.info("Unable to set WalletConnect deep link")}},setWalletConnectAndroidDeepLink(e){try{const[t]=e.split("?");localStorage.setItem(i.WALLETCONNECT_DEEPLINK_CHOICE,JSON.stringify({href:t,name:"Android"}))}catch{console.info("Unable to set WalletConnect android deep link")}},removeWalletConnectDeepLink(){try{localStorage.removeItem(i.WALLETCONNECT_DEEPLINK_CHOICE)}catch{console.info("Unable to remove WalletConnect deep link")}},setWeb3ModalVersionInStorage(){try{typeof localStorage<"u"&&localStorage.setItem(i.W3M_VERSION,"2.7.0")}catch{console.info("Unable to set Web3Modal version in storage")}},getWalletRouterData(){var e;const t=(e=W.state.data)==null?void 0:e.Wallet;if(!t)throw new Error('Missing "Wallet" view data');return t},getSwitchNetworkRouterData(){var e;const t=(e=W.state.data)==null?void 0:e.SwitchNetwork;if(!t)throw new Error('Missing "SwitchNetwork" view data');return t},isPreferInjectedFlag(){return typeof location<"u"?new URLSearchParams(location.search).has(i.W3M_PREFER_INJECTED_URL_FLAG):!1}};let k;const h={ethereumClient:void 0,setEthereumClient(e){k=e},client(){if(k)return k;throw new Error("ClientCtrl has no client set")}},T=typeof location<"u"&&(location.hostname.includes("localhost")||location.protocol.includes("https")),l=g({enabled:T,userSessionId:"",events:[],connectedWalletId:void 0}),B={state:l,subscribe(e){return f(l.events,()=>e(R(l.events[l.events.length-1])))},initialize(){l.enabled&&typeof(crypto==null?void 0:crypto.randomUUID)<"u"&&(l.userSessionId=crypto.randomUUID())},setConnectedWalletId(e){l.connectedWalletId=e},click(e){if(l.enabled){const t={type:"CLICK",name:e.name,userSessionId:l.userSessionId,timestamp:Date.now(),data:e};l.events.push(t)}},track(e){if(l.enabled){const t={type:"TRACK",name:e.name,userSessionId:l.userSessionId,timestamp:Date.now(),data:e};l.events.push(t)}},view(e){if(l.enabled){const t={type:"VIEW",name:e.name,userSessionId:l.userSessionId,timestamp:Date.now(),data:e};l.events.push(t)}}},p=g({selectedChain:void 0,chains:void 0,isCustomDesktop:!1,isCustomMobile:!1,isDataLoaded:!1,isUiLoaded:!1,isPreferInjected:!1}),C={state:p,subscribe(e){return f(p,()=>e(p))},setChains(e){p.chains=e},getSelectedChain(){const e=h.client().getNetwork().chain;return e&&(p.selectedChain=e),p.selectedChain},setSelectedChain(e){p.selectedChain=e},setIsCustomDesktop(e){p.isCustomDesktop=e},setIsCustomMobile(e){p.isCustomMobile=e},setIsDataLoaded(e){p.isDataLoaded=e},setIsUiLoaded(e){p.isUiLoaded=e},setIsPreferInjected(e){p.isPreferInjected=e}},U=g({projectId:"",mobileWallets:void 0,desktopWallets:void 0,walletImages:void 0,chainImages:void 0,tokenImages:void 0,tokenContracts:void 0,enableNetworkView:!1,enableAccountView:!0,enableExplorer:!0,defaultChain:void 0,explorerExcludedWalletIds:void 0,explorerRecommendedWalletIds:void 0,termsOfServiceUrl:void 0,privacyPolicyUrl:void 0}),b={state:U,subscribe(e){return f(U,()=>e(U))},setConfig(e){var t,n;B.initialize(),C.setIsCustomMobile(Boolean((t=e.mobileWallets)==null?void 0:t.length)),C.setIsCustomDesktop(Boolean((n=e.desktopWallets)==null?void 0:n.length)),C.setChains(h.client().chains),C.setIsPreferInjected(h.client().isInjectedProviderInstalled()&&i.isPreferInjectedFlag()),e.defaultChain&&C.setSelectedChain(e.defaultChain),i.setWeb3ModalVersionInStorage(),Object.assign(U,e)}},V="eip155",H="https://rpc.walletconnect.com",K={async getIdentity(e,t){const{projectId:n}=b.state,s=`${V}:${t}`,r=`${H}/v1/identity/${e}?chainId=${s}&projectId=${n}`;return(await fetch(r)).json()}},a=g({address:void 0,profileName:void 0,profileAvatar:void 0,profileLoading:!1,balanceLoading:!1,balance:void 0,isConnected:!1}),F={state:a,subscribe(e){return f(a,()=>e(a))},getAccount(){const e=h.client().getAccount();a.address=e.address,a.isConnected=e.isConnected},async fetchProfile(e,t){var n;try{a.profileLoading=!0,a.profileName=null,a.profileAvatar=null;const s=t??a.address,r=1,d=(n=C.state.chains)==null?void 0:n.find(c=>c.id===r);if(s&&d){try{const c=await K.getIdentity(s,r);a.profileName=c.name,a.profileAvatar=c.avatar}catch{const m=await h.client().fetchEnsName({address:s,chainId:r});if(a.profileName=m,m){const v=await h.client().fetchEnsAvatar({name:m,chainId:r});a.profileAvatar=v}}a.profileAvatar&&await e(a.profileAvatar)}}finally{a.profileLoading=!1}},async fetchBalance(e){try{const{chain:t}=h.client().getNetwork(),{tokenContracts:n}=b.state;let s;t&&n&&(s=n[t.id]),a.balanceLoading=!0;const r=e??a.address;if(r){const d=await h.client().fetchBalance({address:r,token:s});a.balance={amount:d.formatted,symbol:d.symbol}}}finally{a.balanceLoading=!1}},setAddress(e){a.address=e},setIsConnected(e){a.isConnected=e},resetBalance(){a.balance=void 0},resetAccount(){a.address=void 0,a.isConnected=!1,a.profileName=void 0,a.profileAvatar=void 0,a.balance=void 0}},M="https://explorer-api.walletconnect.com";async function N(e,t){const n=new URL(e,M);return n.searchParams.append("projectId",b.state.projectId),Object.entries(t).forEach(([s,r])=>{r&&n.searchParams.append(s,String(r))}),(await fetch(n)).json()}const I={async getDesktopListings(e){return N("/w3m/v1/getDesktopListings",e)},async getMobileListings(e){return N("/w3m/v1/getMobileListings",e)},async getInjectedListings(e){return N("/w3m/v1/getInjectedListings",e)},async getAllListings(e){return N("/w3m/v1/getAllListings",e)},getWalletImageUrl(e){return`${M}/w3m/v1/getWalletImage/${e}?projectId=${b.state.projectId}`},getAssetImageUrl(e){return`${M}/w3m/v1/getAssetImage/${e}?projectId=${b.state.projectId}`}};var J=Object.defineProperty,P=Object.getOwnPropertySymbols,z=Object.prototype.hasOwnProperty,G=Object.prototype.propertyIsEnumerable,S=(e,t,n)=>t in e?J(e,t,{enumerable:!0,configurable:!0,writable:!0,value:n}):e[t]=n,q=(e,t)=>{for(var n in t||(t={}))z.call(t,n)&&S(e,n,t[n]);if(P)for(var n of P(t))G.call(t,n)&&S(e,n,t[n]);return e};const $=i.isMobile(),u=g({wallets:{listings:[],total:0,page:1},injectedWallets:[],search:{listings:[],total:0,page:1},recomendedWallets:[]}),ne={state:u,async getRecomendedWallets(){const{explorerRecommendedWalletIds:e,explorerExcludedWalletIds:t}=b.state;if(e==="NONE"||t==="ALL"&&!e)return u.recomendedWallets;if(i.isArray(e)){const n={recommendedIds:e.join(",")},{listings:s}=await I.getAllListings(n),r=Object.values(s);r.sort((d,c)=>{const m=e.indexOf(d.id),v=e.indexOf(c.id);return m-v}),u.recomendedWallets=r}else{const n=i.isArray(t),s={page:1,entries:i.RECOMMENDED_WALLET_AMOUNT,version:2,excludedIds:n?t.join(","):void 0},{listings:r}=$?await I.getMobileListings(s):await I.getDesktopListings(s);u.recomendedWallets=Object.values(r)}return u.recomendedWallets},async getWallets(e){const t=q({},e),{explorerRecommendedWalletIds:n,explorerExcludedWalletIds:s}=b.state,{recomendedWallets:r}=u;if(s==="ALL")return u.wallets;r.length?t.excludedIds=r.map(O=>O.id).join(","):i.isArray(n)&&(t.excludedIds=n.join(",")),i.isArray(s)&&(t.excludedIds=[t.excludedIds,s].filter(Boolean).join(","));const{page:d,search:c}=e,{listings:m,total:v}=$?await I.getMobileListings(t):await I.getDesktopListings(t),y=Object.values(m),A=c?"search":"wallets";return u[A]={listings:[...u[A].listings,...y],total:v,page:d??1},{listings:y,total:v}},async getInjectedWallets(){const{listings:e}=await I.getInjectedListings({}),t=Object.values(e);return u.injectedWallets=t,u.injectedWallets},getWalletImageUrl(e){return I.getWalletImageUrl(e)},getAssetImageUrl(e){return I.getAssetImageUrl(e)},resetSearch(){u.search={listings:[],total:0,page:1}}},E=g({pairingEnabled:!1,pairingUri:"",pairingError:!1}),D={state:E,subscribe(e){return f(E,()=>e(E))},setPairingUri(e){E.pairingUri=e},setPairingError(e){E.pairingError=e},setPairingEnabled(e){E.pairingEnabled=e}},L=g({open:!1}),se={state:L,subscribe(e){return f(L,()=>e(L))},async open(e){return new Promise(t=>{const{isUiLoaded:n,isDataLoaded:s,isPreferInjected:r,selectedChain:d}=C.state,{isConnected:c}=F.state,{enableNetworkView:m}=b.state;if(D.setPairingEnabled(!0),e!=null&&e.route)W.reset(e.route);else if(c)W.reset("Account");else if(m)W.reset("SelectNetwork");else if(r){h.client().connectConnector("injected",d?.id).catch(y=>console.error(y)),t();return}else W.reset("ConnectWallet");const{pairingUri:v}=D.state;if(n&&s&&(v||c))L.open=!0,t();else{const y=setInterval(()=>{const A=C.state,O=D.state;A.isUiLoaded&&A.isDataLoaded&&(O.pairingUri||c)&&(clearInterval(y),L.open=!0,t())},200)}})},close(){L.open=!1}};var Q=Object.defineProperty,_=Object.getOwnPropertySymbols,X=Object.prototype.hasOwnProperty,Y=Object.prototype.propertyIsEnumerable,x=(e,t,n)=>t in e?Q(e,t,{enumerable:!0,configurable:!0,writable:!0,value:n}):e[t]=n,Z=(e,t)=>{for(var n in t||(t={}))X.call(t,n)&&x(e,n,t[n]);if(_)for(var n of _(t))Y.call(t,n)&&x(e,n,t[n]);return e};function ee(){return typeof matchMedia<"u"&&matchMedia("(prefers-color-scheme: dark)").matches}const j=g({themeMode:ee()?"dark":"light"}),ae={state:j,subscribe(e){return f(j,()=>e(j))},setThemeConfig(e){const{themeMode:t,themeVariables:n}=e;t&&(j.themeMode=t),n&&(j.themeVariables=Z({},n))}},w=g({open:!1,message:"",variant:"success"}),re={state:w,subscribe(e){return f(w,()=>e(w))},openToast(e,t){w.open=!0,w.message=e,w.variant=t},closeToast(){w.open=!1}};export{F as AccountCtrl,h as ClientCtrl,b as ConfigCtrl,i as CoreUtil,B as EventsCtrl,ne as ExplorerCtrl,se as ModalCtrl,C as OptionsCtrl,W as RouterCtrl,ae as ThemeCtrl,re as ToastCtrl,D as WcConnectionCtrl};
+-//# sourceMappingURL=index.js.map
++import { proxy as g, subscribe as f, snapshot as R } from "valtio/vanilla";
++const o = g({
++        history: ["ConnectWallet"],
++        view: "ConnectWallet",
++        data: void 0
++    }),
++    W = {
++        state: o,
++        subscribe(e) {
++            return f(o, () => e(o));
++        },
++        push(e, t) {
++            e !== o.view && (o.view = e, t && (o.data = t), o.history.push(e));
++        },
++        reset(e) {
++            o.view = e, o.history = [e];
++        },
++        replace(e) {
++            o.history.length > 1 && (o.history[o.history.length - 1] = e, o.view = e);
++        },
++        goBack() {
++            if (o.history.length > 1) {
++                o.history.pop();
++                const [e] = o.history.slice(-1);
++                o.view = e;
++            }
++        },
++        setData(e) {
++            o.data = e;
++        }
++    },
++    i = {
++        WALLETCONNECT_DEEPLINK_CHOICE: "WALLETCONNECT_DEEPLINK_CHOICE",
++        W3M_VERSION: "W3M_VERSION",
++        W3M_PREFER_INJECTED_URL_FLAG: "w3mPreferInjected",
++        RECOMMENDED_WALLET_AMOUNT: 9,
++        isMobile() {
++            return typeof window < "u" ? Boolean(window.matchMedia("(pointer:coarse)").matches || /Android|webOS|iPhone|iPad|iPod|BlackBerry|Opera Mini/u.test(navigator.userAgent)) : !1;
++        },
++        isAndroid() {
++            return i.isMobile() && navigator.userAgent.toLowerCase().includes("android");
++        },
++        isIos() {
++            const e = navigator.userAgent.toLowerCase();
++            return i.isMobile() && (e.includes("iphone") || e.includes("ipad"));
++        },
++        isHttpUrl(e) {
++            return e.startsWith("http://") || e.startsWith("https://");
++        },
++        isArray(e) {
++            return Array.isArray(e) && e.length > 0;
++        },
++        formatNativeUrl(e, t, n) {
++            if (i.isHttpUrl(e)) return this.formatUniversalUrl(e, t, n);
++            let s = e;
++            s.includes("://") || (s = e.replaceAll("/", "").replaceAll(":", ""), s = `${s}://`), s.endsWith("/") || (s = `${s}/`), this.setWalletConnectDeepLink(s, n);
++            const r = encodeURIComponent(t);
++            return `${s}wc?uri=${r}`;
++        },
++        formatUniversalUrl(e, t, n) {
++            if (!i.isHttpUrl(e)) return this.formatNativeUrl(e, t, n);
++            let s = e;
++            s.endsWith("/") || (s = `${s}/`), this.setWalletConnectDeepLink(s, n);
++            const r = encodeURIComponent(t);
++            return `${s}wc?uri=${r}`;
++        },
++        async wait(e) {
++            return new Promise(t => {
++                setTimeout(t, e);
++            });
++        },
++        openHref(e, t) {
++            window.open(e, t, "noreferrer noopener");
++        },
++        setWalletConnectDeepLink(e, t) {
++            try {
++                localStorage.setItem(i.WALLETCONNECT_DEEPLINK_CHOICE, JSON.stringify({
++                    href: e,
++                    name: t
++                }));
++            } catch {
++                console.info("Unable to set WalletConnect deep link");
++            }
++        },
++        setWalletConnectAndroidDeepLink(e) {
++            try {
++                const [t] = e.split("?");
++                localStorage.setItem(i.WALLETCONNECT_DEEPLINK_CHOICE, JSON.stringify({
++                    href: t,
++                    name: "Android"
++                }));
++            } catch {
++                console.info("Unable to set WalletConnect android deep link");
++            }
++        },
++        removeWalletConnectDeepLink() {
++            try {
++                localStorage.removeItem(i.WALLETCONNECT_DEEPLINK_CHOICE);
++            } catch {
++                console.info("Unable to remove WalletConnect deep link");
++            }
++        },
++        setWeb3ModalVersionInStorage() {
++            try {
++                typeof localStorage < "u" && localStorage.setItem(i.W3M_VERSION, "2.7.0");
++            } catch {
++                console.info("Unable to set Web3Modal version in storage");
++            }
++        },
++        getWalletRouterData() {
++            var e;
++            const t = (e = W.state.data) == null ? void 0 : e.Wallet;
++            if (!t) throw new Error('Missing "Wallet" view data');
++            return t;
++        },
++        getSwitchNetworkRouterData() {
++            var e;
++            const t = (e = W.state.data) == null ? void 0 : e.SwitchNetwork;
++            if (!t) throw new Error('Missing "SwitchNetwork" view data');
++            return t;
++        },
++        isPreferInjectedFlag() {
++            return typeof location < "u" ? new URLSearchParams(location.search).has(i.W3M_PREFER_INJECTED_URL_FLAG) : !1;
++        }
++    };
++let k;
++const h = {
++        ethereumClient: void 0,
++        setEthereumClient(e) {
++            k = e;
++        },
++        client() {
++            if (k) return k;
++            throw new Error("ClientCtrl has no client set");
++        }
++    },
++    T = typeof location < "u" && (location.hostname.includes("localhost") || location.protocol.includes("https")),
++    l = g({
++        enabled: T,
++        userSessionId: "",
++        events: [],
++        connectedWalletId: void 0
++    }),
++    B = {
++        state: l,
++        subscribe(e) {
++            return f(l.events, () => e(R(l.events[l.events.length - 1])));
++        },
++        initialize() {
++            l.enabled && typeof (crypto == null ? void 0 : crypto.randomUUID) < "u" && (l.userSessionId = crypto.randomUUID());
++        },
++        setConnectedWalletId(e) {
++            l.connectedWalletId = e;
++        },
++        click(e) {
++            if (l.enabled) {
++                const t = {
++                    type: "CLICK",
++                    name: e.name,
++                    userSessionId: l.userSessionId,
++                    timestamp: Date.now(),
++                    data: e
++                };
++                l.events.push(t);
++            }
++        },
++        track(e) {
++            if (l.enabled) {
++                const t = {
++                    type: "TRACK",
++                    name: e.name,
++                    userSessionId: l.userSessionId,
++                    timestamp: Date.now(),
++                    data: e
++                };
++                l.events.push(t);
++            }
++        },
++        view(e) {
++            if (l.enabled) {
++                const t = {
++                    type: "VIEW",
++                    name: e.name,
++                    userSessionId: l.userSessionId,
++                    timestamp: Date.now(),
++                    data: e
++                };
++                l.events.push(t);
++            }
++        }
++    },
++    p = g({
++        selectedChain: void 0,
++        chains: void 0,
++        isCustomDesktop: !1,
++        isCustomMobile: !1,
++        isDataLoaded: !1,
++        isUiLoaded: !1,
++        isPreferInjected: !1
++    }),
++    C = {
++        state: p,
++        subscribe(e) {
++            return f(p, () => e(p));
++        },
++        setChains(e) {
++            p.chains = e;
++        },
++        getSelectedChain() {
++            const e = h.client().getNetwork().chain;
++            return e && (p.selectedChain = e), p.selectedChain;
++        },
++        setSelectedChain(e) {
++            p.selectedChain = e;
++        },
++        setIsCustomDesktop(e) {
++            p.isCustomDesktop = e;
++        },
++        setIsCustomMobile(e) {
++            p.isCustomMobile = e;
++        },
++        setIsDataLoaded(e) {
++            p.isDataLoaded = e;
++        },
++        setIsUiLoaded(e) {
++            p.isUiLoaded = e;
++        },
++        setIsPreferInjected(e) {
++            p.isPreferInjected = e;
++        }
++    },
++    U = g({
++        projectId: "",
++        mobileWallets: void 0,
++        desktopWallets: void 0,
++        walletImages: void 0,
++        chainImages: void 0,
++        tokenImages: void 0,
++        tokenContracts: void 0,
++        enableNetworkView: !1,
++        enableAccountView: !0,
++        enableExplorer: !0,
++        defaultChain: void 0,
++        explorerExcludedWalletIds: void 0,
++        explorerRecommendedWalletIds: void 0,
++        termsOfServiceUrl: void 0,
++        privacyPolicyUrl: void 0
++    }),
++    b = {
++        state: U,
++        subscribe(e) {
++            return f(U, () => e(U));
++        },
++        setConfig(e) {
++            var t, n;
++            B.initialize(), C.setIsCustomMobile(Boolean((t = e.mobileWallets) == null ? void 0 : t.length)), C.setIsCustomDesktop(Boolean((n = e.desktopWallets) == null ? void 0 : n.length)), C.setChains(h.client().chains), C.setIsPreferInjected(h.client().isInjectedProviderInstalled() && i.isPreferInjectedFlag()), e.defaultChain && C.setSelectedChain(e.defaultChain), i.setWeb3ModalVersionInStorage(), Object.assign(U, e);
++        }
++    },
++    V = "eip155",
++    H = "https://rpc.walletconnect.com",
++    K = {
++        async getIdentity(e, t) {
++            const {
++                    projectId: n
++                } = b.state,
++                s = `${V}:${t}`,
++                r = `${H}/v1/identity/${e}?chainId=${s}&projectId=${n}`;
++            return (await fetch(r)).json();
++        }
++    },
++    a = g({
++        address: void 0,
++        profileName: void 0,
++        profileAvatar: void 0,
++        profileLoading: !1,
++        balanceLoading: !1,
++        balance: void 0,
++        isConnected: !1
++    }),
++    F = {
++        state: a,
++        subscribe(e) {
++            return f(a, () => e(a));
++        },
++        getAccount() {
++            const e = h.client().getAccount();
++            a.address = e.address, a.isConnected = e.isConnected;
++        },
++        async fetchProfile(e, t) {
++            var n;
++            try {
++                a.profileLoading = !0, a.profileName = null, a.profileAvatar = null;
++                const s = t !== null && t !== void 0 ? t : a.address,
++                    r = 1,
++                    d = (n = C.state.chains) == null ? void 0 : n.find(c => c.id === r);
++                if (s && d) {
++                    try {
++                        const c = await K.getIdentity(s, r);
++                        a.profileName = c.name, a.profileAvatar = c.avatar;
++                    } catch {
++                        const m = await h.client().fetchEnsName({
++                            address: s,
++                            chainId: r
++                        });
++                        if (a.profileName = m, m) {
++                            const v = await h.client().fetchEnsAvatar({
++                                name: m,
++                                chainId: r
++                            });
++                            a.profileAvatar = v;
++                        }
++                    }
++                    a.profileAvatar && (await e(a.profileAvatar));
++                }
++            } finally {
++                a.profileLoading = !1;
++            }
++        },
++        async fetchBalance(e) {
++            try {
++                const {
++                        chain: t
++                    } = h.client().getNetwork(),
++                    {
++                        tokenContracts: n
++                    } = b.state;
++                let s;
++                t && n && (s = n[t.id]), a.balanceLoading = !0;
++                const r = e !== null && e !== void 0 ? e : a.address;
++                if (r) {
++                    const d = await h.client().fetchBalance({
++                        address: r,
++                        token: s
++                    });
++                    a.balance = {
++                        amount: d.formatted,
++                        symbol: d.symbol
++                    };
++                }
++            } finally {
++                a.balanceLoading = !1;
++            }
++        },
++        setAddress(e) {
++            a.address = e;
++        },
++        setIsConnected(e) {
++            a.isConnected = e;
++        },
++        resetBalance() {
++            a.balance = void 0;
++        },
++        resetAccount() {
++            a.address = void 0, a.isConnected = !1, a.profileName = void 0, a.profileAvatar = void 0, a.balance = void 0;
++        }
++    },
++    M = "https://explorer-api.walletconnect.com";
++async function N(e, t) {
++    const n = new URL(e, M);
++    return n.searchParams.append("projectId", b.state.projectId), Object.entries(t).forEach(([s, r]) => {
++        r && n.searchParams.append(s, String(r));
++    }), (await fetch(n)).json();
++}
++const I = {
++    async getDesktopListings(e) {
++        return N("/w3m/v1/getDesktopListings", e);
++    },
++    async getMobileListings(e) {
++        return N("/w3m/v1/getMobileListings", e);
++    },
++    async getInjectedListings(e) {
++        return N("/w3m/v1/getInjectedListings", e);
++    },
++    async getAllListings(e) {
++        return N("/w3m/v1/getAllListings", e);
++    },
++    getWalletImageUrl(e) {
++        return `${M}/w3m/v1/getWalletImage/${e}?projectId=${b.state.projectId}`;
++    },
++    getAssetImageUrl(e) {
++        return `${M}/w3m/v1/getAssetImage/${e}?projectId=${b.state.projectId}`;
++    }
++};
++var J = Object.defineProperty,
++    P = Object.getOwnPropertySymbols,
++    z = Object.prototype.hasOwnProperty,
++    G = Object.prototype.propertyIsEnumerable,
++    S = (e, t, n) => t in e ? J(e, t, {
++        enumerable: !0,
++        configurable: !0,
++        writable: !0,
++        value: n
++    }) : e[t] = n,
++    q = (e, t) => {
++        for (var n in t || (t = {})) z.call(t, n) && S(e, n, t[n]);
++        if (P) for (var n of P(t)) G.call(t, n) && S(e, n, t[n]);
++        return e;
++    };
++const $ = i.isMobile(),
++    u = g({
++        wallets: {
++            listings: [],
++            total: 0,
++            page: 1
++        },
++        injectedWallets: [],
++        search: {
++            listings: [],
++            total: 0,
++            page: 1
++        },
++        recomendedWallets: []
++    }),
++    ne = {
++        state: u,
++        async getRecomendedWallets() {
++            const {
++                explorerRecommendedWalletIds: e,
++                explorerExcludedWalletIds: t
++            } = b.state;
++            if (e === "NONE" || t === "ALL" && !e) return u.recomendedWallets;
++            if (i.isArray(e)) {
++                const n = {
++                        recommendedIds: e.join(",")
++                    },
++                    {
++                        listings: s
++                    } = await I.getAllListings(n),
++                    r = Object.values(s);
++                r.sort((d, c) => {
++                    const m = e.indexOf(d.id),
++                        v = e.indexOf(c.id);
++                    return m - v;
++                }), u.recomendedWallets = r;
++            } else {
++                const n = i.isArray(t),
++                    s = {
++                        page: 1,
++                        entries: i.RECOMMENDED_WALLET_AMOUNT,
++                        version: 2,
++                        excludedIds: n ? t.join(",") : void 0
++                    },
++                    {
++                        listings: r
++                    } = $ ? await I.getMobileListings(s) : await I.getDesktopListings(s);
++                u.recomendedWallets = Object.values(r);
++            }
++            return u.recomendedWallets;
++        },
++        async getWallets(e) {
++            const t = q({}, e),
++                {
++                    explorerRecommendedWalletIds: n,
++                    explorerExcludedWalletIds: s
++                } = b.state,
++                {
++                    recomendedWallets: r
++                } = u;
++            if (s === "ALL") return u.wallets;
++            r.length ? t.excludedIds = r.map(O => O.id).join(",") : i.isArray(n) && (t.excludedIds = n.join(",")), i.isArray(s) && (t.excludedIds = [t.excludedIds, s].filter(Boolean).join(","));
++            const {
++                    page: d,
++                    search: c
++                } = e,
++                {
++                    listings: m,
++                    total: v
++                } = $ ? await I.getMobileListings(t) : await I.getDesktopListings(t),
++                y = Object.values(m),
++                A = c ? "search" : "wallets";
++            return u[A] = {
++                listings: [...u[A].listings, ...y],
++                total: v,
++                page: d !== null && d !== void 0 ? d : 1
++            }, {
++                listings: y,
++                total: v
++            };
++        },
++        async getInjectedWallets() {
++            const {
++                    listings: e
++                } = await I.getInjectedListings({}),
++                t = Object.values(e);
++            return u.injectedWallets = t, u.injectedWallets;
++        },
++        getWalletImageUrl(e) {
++            return I.getWalletImageUrl(e);
++        },
++        getAssetImageUrl(e) {
++            return I.getAssetImageUrl(e);
++        },
++        resetSearch() {
++            u.search = {
++                listings: [],
++                total: 0,
++                page: 1
++            };
++        }
++    },
++    E = g({
++        pairingEnabled: !1,
++        pairingUri: "",
++        pairingError: !1
++    }),
++    D = {
++        state: E,
++        subscribe(e) {
++            return f(E, () => e(E));
++        },
++        setPairingUri(e) {
++            E.pairingUri = e;
++        },
++        setPairingError(e) {
++            E.pairingError = e;
++        },
++        setPairingEnabled(e) {
++            E.pairingEnabled = e;
++        }
++    },
++    L = g({
++        open: !1
++    }),
++    se = {
++        state: L,
++        subscribe(e) {
++            return f(L, () => e(L));
++        },
++        async open(e) {
++            return new Promise(t => {
++                const {
++                        isUiLoaded: n,
++                        isDataLoaded: s,
++                        isPreferInjected: r,
++                        selectedChain: d
++                    } = C.state,
++                    {
++                        isConnected: c
++                    } = F.state,
++                    {
++                        enableNetworkView: m
++                    } = b.state;
++                if (D.setPairingEnabled(!0), e != null && e.route) W.reset(e.route);else if (c) W.reset("Account");else if (m) W.reset("SelectNetwork");else if (r) {
++                    h.client().connectConnector("injected", d === null || d === void 0 ? void 0 : d.id).catch(y => console.error(y)), t();
++                    return;
++                } else W.reset("ConnectWallet");
++                const {
++                    pairingUri: v
++                } = D.state;
++                if (n && s && (v || c)) L.open = !0, t();else {
++                    const y = setInterval(() => {
++                        const A = C.state,
++                            O = D.state;
++                        A.isUiLoaded && A.isDataLoaded && (O.pairingUri || c) && (clearInterval(y), L.open = !0, t());
++                    }, 200);
++                }
++            });
++        },
++        close() {
++            L.open = !1;
++        }
++    };
++var Q = Object.defineProperty,
++    _ = Object.getOwnPropertySymbols,
++    X = Object.prototype.hasOwnProperty,
++    Y = Object.prototype.propertyIsEnumerable,
++    x = (e, t, n) => t in e ? Q(e, t, {
++        enumerable: !0,
++        configurable: !0,
++        writable: !0,
++        value: n
++    }) : e[t] = n,
++    Z = (e, t) => {
++        for (var n in t || (t = {})) X.call(t, n) && x(e, n, t[n]);
++        if (_) for (var n of _(t)) Y.call(t, n) && x(e, n, t[n]);
++        return e;
++    };
++function ee() {
++    return typeof matchMedia < "u" && matchMedia("(prefers-color-scheme: dark)").matches;
++}
++const j = g({
++        themeMode: ee() ? "dark" : "light"
++    }),
++    ae = {
++        state: j,
++        subscribe(e) {
++            return f(j, () => e(j));
++        },
++        setThemeConfig(e) {
++            const {
++                themeMode: t,
++                themeVariables: n
++            } = e;
++            t && (j.themeMode = t), n && (j.themeVariables = Z({}, n));
++        }
++    },
++    w = g({
++        open: !1,
++        message: "",
++        variant: "success"
++    }),
++    re = {
++        state: w,
++        subscribe(e) {
++            return f(w, () => e(w));
++        },
++        openToast(e, t) {
++            w.open = !0, w.message = e, w.variant = t;
++        },
++        closeToast() {
++            w.open = !1;
++        }
++    };
++export { F as AccountCtrl, h as ClientCtrl, b as ConfigCtrl, i as CoreUtil, B as EventsCtrl, ne as ExplorerCtrl, se as ModalCtrl, C as OptionsCtrl, W as RouterCtrl, ae as ThemeCtrl, re as ToastCtrl, D as WcConnectionCtrl };

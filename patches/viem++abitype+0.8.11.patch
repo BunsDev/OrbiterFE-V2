@@ -1,0 +1,134 @@
+diff --git a/node_modules/viem/node_modules/abitype/dist/esm/errors.js b/node_modules/viem/node_modules/abitype/dist/esm/errors.js
+index 41b53ba..3ebaa00 100644
+--- a/node_modules/viem/node_modules/abitype/dist/esm/errors.js
++++ b/node_modules/viem/node_modules/abitype/dist/esm/errors.js
+@@ -3,7 +3,7 @@ export class BaseError extends Error {
+     constructor(shortMessage, args = {}) {
+         const details = args.cause instanceof BaseError
+             ? args.cause.details
+-            : args.cause?.message
++            : args.cause && args.cause.message
+                 ? args.cause.message
+                 : args.details;
+         const docsPath = args.cause instanceof BaseError
+diff --git a/node_modules/viem/node_modules/abitype/dist/esm/human-readable/formatAbiParameter.js b/node_modules/viem/node_modules/abitype/dist/esm/human-readable/formatAbiParameter.js
+index 77367ed..d97dfb2 100644
+--- a/node_modules/viem/node_modules/abitype/dist/esm/human-readable/formatAbiParameter.js
++++ b/node_modules/viem/node_modules/abitype/dist/esm/human-readable/formatAbiParameter.js
+@@ -12,7 +12,7 @@ export function formatAbiParameter(abiParameter) {
+                 type += ', ';
+         }
+         const result = execTyped(tupleRegex, abiParameter.type);
+-        type += `)${result?.array ?? ''}`;
++        type += `)${result && result.array || ''}`;
+         return formatAbiParameter({
+             ...abiParameter,
+             type,
+diff --git a/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/structs.js b/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/structs.js
+index 74c1944..a9d1883 100644
+--- a/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/structs.js
++++ b/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/structs.js
+@@ -52,7 +52,7 @@ function resolveStructs(abiParameters, structs, ancestors = new Set()) {
+             components.push(abiParameter);
+         else {
+             const match = execTyped(typeWithoutTupleRegex, abiParameter.type);
+-            if (!match?.type)
++            if (!(match && match.type))
+                 throw new InvalidAbiTypeParameterError({ abiParameter });
+             const { array, type } = match;
+             if (type in structs) {
+@@ -60,8 +60,8 @@ function resolveStructs(abiParameters, structs, ancestors = new Set()) {
+                     throw new CircularReferenceError({ type });
+                 components.push({
+                     ...abiParameter,
+-                    type: `tuple${array ?? ''}`,
+-                    components: resolveStructs(structs[type] ?? [], structs, new Set([...ancestors, type])),
++                    type: `tuple${array || ''}`,
++                    components: resolveStructs(structs[type] || [], structs, new Set([...ancestors, type])),
+                 });
+             }
+             else {
+diff --git a/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/utils.js b/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/utils.js
+index 39d765e..ced8aea 100644
+--- a/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/utils.js
++++ b/node_modules/viem/node_modules/abitype/dist/esm/human-readable/runtime/utils.js
+@@ -35,7 +35,7 @@ export function parseSignature(signature, structs = {}) {
+         return {
+             name: match.name,
+             type: 'function',
+-            stateMutability: match.stateMutability ?? 'nonpayable',
++            stateMutability: match.stateMutability || 'nonpayable',
+             inputs,
+             outputs,
+         };
+@@ -80,7 +80,7 @@ export function parseSignature(signature, structs = {}) {
+         }
+         return {
+             type: 'constructor',
+-            stateMutability: match.stateMutability ?? 'nonpayable',
++            stateMutability: match.stateMutability || 'nonpayable',
+             inputs: abiParameters,
+         };
+     }
+@@ -97,7 +97,7 @@ const abiParameterWithoutTupleRegex = /^(?<type>[a-zA-Z0-9_]+?)(?<array>(?:\[\d*
+ const abiParameterWithTupleRegex = /^\((?<type>.+?)\)(?<array>(?:\[\d*?\])+?)?(?:\s(?<modifier>calldata|indexed|memory|storage{1}))?(?:\s(?<name>[a-zA-Z0-9_]+))?$/;
+ const dynamicIntegerRegex = /^u?int$/;
+ export function parseAbiParameter(param, options) {
+-    const parameterCacheKey = getParameterCacheKey(param, options?.type);
++    const parameterCacheKey = getParameterCacheKey(param, options &&options.type);
+     if (parameterCache.has(parameterCacheKey))
+         return parameterCache.get(parameterCacheKey);
+     const isTuple = isTupleRegex.test(param);
+@@ -108,7 +108,7 @@ export function parseAbiParameter(param, options) {
+         throw new SolidityProtectedKeywordError({ param, name: match.name });
+     const name = match.name ? { name: match.name } : {};
+     const indexed = match.modifier === 'indexed' ? { indexed: true } : {};
+-    const structs = options?.structs ?? {};
++    const structs = options && options.structs || {};
+     let type;
+     let components = {};
+     if (isTuple) {
+@@ -130,26 +130,26 @@ export function parseAbiParameter(param, options) {
+     }
+     else {
+         type = match.type;
+-        if (!(options?.type === 'struct') && !isSolidityType(type))
++        if (!(options && options.type === 'struct') && !isSolidityType(type))
+             throw new UnknownSolidityTypeError({ type });
+     }
+     if (match.modifier) {
+-        if (!options?.modifiers?.has?.(match.modifier))
++        if (!(options && options.modifiers && options.modifiers.has(match.modifier)))
+             throw new InvalidModifierError({
+                 param,
+-                type: options?.type,
++                type: options && options.type,
+                 modifier: match.modifier,
+             });
+         if (functionModifiers.has(match.modifier) &&
+             !isValidDataLocation(type, !!match.array))
+             throw new InvalidFunctionModifierError({
+                 param,
+-                type: options?.type,
++                type: options && options.type,
+                 modifier: match.modifier,
+             });
+     }
+     const abiParameter = {
+-        type: `${type}${match.array ?? ''}`,
++        type: `${type}${match.array || ''}`,
+         ...name,
+         ...indexed,
+         ...components,
+diff --git a/node_modules/viem/node_modules/abitype/dist/esm/regex.js b/node_modules/viem/node_modules/abitype/dist/esm/regex.js
+index 081de0b..1369cfd 100644
+--- a/node_modules/viem/node_modules/abitype/dist/esm/regex.js
++++ b/node_modules/viem/node_modules/abitype/dist/esm/regex.js
+@@ -1,6 +1,6 @@
+ export function execTyped(regex, string) {
+     const match = regex.exec(string);
+-    return match?.groups;
++    return match && match.groups;
+ }
+ export const bytesRegex = /^bytes([1-9]|1[0-9]|2[0-9]|3[0-2])?$/;
+ export const integerRegex = /^u?int(8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)?$/;

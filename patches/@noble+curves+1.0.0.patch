@@ -1,0 +1,13 @@
+diff --git a/node_modules/@noble/curves/abstract/weierstrass.js b/node_modules/@noble/curves/abstract/weierstrass.js
+index 11833de..9cda5fb 100644
+--- a/node_modules/@noble/curves/abstract/weierstrass.js
++++ b/node_modules/@noble/curves/abstract/weierstrass.js
+@@ -913,7 +913,7 @@ function weierstrass(curveDef) {
+         const is = invN(s); // s^-1
+         const u1 = modN(h * is); // u1 = hs^-1 mod n
+         const u2 = modN(r * is); // u2 = rs^-1 mod n
+-        const R = Point.BASE.multiplyAndAddUnsafe(P, u1, u2)?.toAffine(); // R = u1⋅G + u2⋅P
++        const R = Point.BASE.multiplyAndAddUnsafe(P, u1, u2) && Point.BASE.multiplyAndAddUnsafe(P, u1, u2).toAffine(); // R = u1⋅G + u2⋅P
+         if (!R)
+             return false;
+         const v = modN(R.x);

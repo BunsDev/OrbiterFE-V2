@@ -1,0 +1,1389 @@
+diff --git a/node_modules/viem/dist/esm/actions/ens/getEnsAddress.js b/node_modules/viem/dist/esm/actions/ens/getEnsAddress.js
+index 39970f9..7ac1e03 100644
+--- a/node_modules/viem/dist/esm/actions/ens/getEnsAddress.js
++++ b/node_modules/viem/dist/esm/actions/ens/getEnsAddress.js
+@@ -74,8 +74,8 @@ export async function getEnsAddress(client, { blockNumber, blockTag, name, unive
+     }
+     catch (err) {
+         if (err instanceof ContractFunctionExecutionError) {
+-            const reason = err.cause?.reason;
+-            if (reason?.includes('Wildcard on non-extended resolvers is not supported'))
++            const reason = err.cause && err.cause.reason;
++            if (reason && reason.includes('Wildcard on non-extended resolvers is not supported'))
+                 return null;
+         }
+         throw err;
+diff --git a/node_modules/viem/dist/esm/actions/getContract.js b/node_modules/viem/dist/esm/actions/getContract.js
+index 2a934a7..7da4c5f 100644
+--- a/node_modules/viem/dist/esm/actions/getContract.js
++++ b/node_modules/viem/dist/esm/actions/getContract.js
+@@ -135,14 +135,14 @@ export function getContract({ abi, address, publicClient, walletClient, }) {
+                 get(_, functionName) {
+                     return (...parameters) => {
+                         const { args, options } = getFunctionParameters(parameters);
+-                        const client = (publicClient ?? walletClient);
++                        const client = (publicClient || walletClient);
+                         return estimateContractGas(client, {
+                             abi,
+                             address,
+                             functionName,
+                             args,
+                             ...options,
+-                            account: options.account ??
++                            account: options.account ||
+                                 walletClient.account,
+                         });
+                     };
+@@ -158,7 +158,7 @@ export function getContract({ abi, address, publicClient, walletClient, }) {
+ export function getFunctionParameters(values) {
+     const hasArgs = values.length && Array.isArray(values[0]);
+     const args = hasArgs ? values[0] : [];
+-    const options = (hasArgs ? values[1] : values[0]) ?? {};
++    const options = (hasArgs ? values[1] : values[0]) || {};
+     return { args, options };
+ }
+ /**
+@@ -179,7 +179,7 @@ export function getEventParameters(values, abiEvent) {
+         hasArgs = true;
+     }
+     const args = hasArgs ? values[0] : undefined;
+-    const options = (hasArgs ? values[1] : values[0]) ?? {};
++    const options = (hasArgs ? values[1] : values[0]) || {};
+     return { args, options };
+ }
+ //# sourceMappingURL=getContract.js.map
+diff --git a/node_modules/viem/dist/esm/actions/public/call.js b/node_modules/viem/dist/esm/actions/public/call.js
+index b968c06..26b5ca5 100644
+--- a/node_modules/viem/dist/esm/actions/public/call.js
++++ b/node_modules/viem/dist/esm/actions/public/call.js
+@@ -39,18 +39,18 @@ import { assertRequest } from '../../utils/transaction/assertRequest.js';
+  * })
+  */
+ export async function call(client, args) {
+-    const { account: account_, batch = Boolean(client.batch?.multicall), blockNumber, blockTag = 'latest', accessList, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, ...rest } = args;
++    const { account: account_, batch = Boolean(client.batch && client.batch.multicall), blockNumber, blockTag = 'latest', accessList, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, ...rest } = args;
+     const account = account_ ? parseAccount(account_) : undefined;
+     try {
+         assertRequest(args);
+         const blockNumberHex = blockNumber ? numberToHex(blockNumber) : undefined;
+         const block = blockNumberHex || blockTag;
+-        const format = client.chain?.formatters?.transactionRequest?.format ||
++        const format = client.chain && client.chain.formatters && client.chain.formatters.transactionRequest && client.chain.formatters.transactionRequest.format ||
+             formatTransactionRequest;
+         const request = format({
+             // Pick out extra data that might exist on the chain's transaction request type.
+             ...extract(rest, { format }),
+-            from: account?.address,
++            from: account && account.address,
+             accessList,
+             data,
+             gas,
+@@ -88,7 +88,7 @@ export async function call(client, args) {
+     catch (err) {
+         const data = getRevertErrorData(err);
+         const { offchainLookup, offchainLookupSignature } = await import('../../utils/ccip.js');
+-        if (data?.slice(0, 10) === offchainLookupSignature && to) {
++        if (data && data.slice(0, 10) === offchainLookupSignature && to) {
+             return { data: await offchainLookup(client, { data, to }) };
+         }
+         throw getCallError(err, {
+@@ -116,7 +116,7 @@ function shouldPerformMulticall({ request }) {
+     return true;
+ }
+ async function scheduleMulticall(client, args) {
+-    const { batchSize = 1024, wait = 0 } = typeof client.batch?.multicall === 'object' ? client.batch.multicall : {};
++    const { batchSize = 1024, wait = 0 } = typeof (client.batch && client.batch.multicall === 'object') ? client.batch.multicall : {};
+     const { blockNumber, blockTag = 'latest', data, multicallAddress: multicallAddress_, to, } = args;
+     let multicallAddress = multicallAddress_;
+     if (!multicallAddress) {
+diff --git a/node_modules/viem/dist/esm/actions/public/estimateContractGas.js b/node_modules/viem/dist/esm/actions/public/estimateContractGas.js
+index 52e0300..92b2140 100644
+--- a/node_modules/viem/dist/esm/actions/public/estimateContractGas.js
++++ b/node_modules/viem/dist/esm/actions/public/estimateContractGas.js
+@@ -51,7 +51,7 @@ export async function estimateContractGas(client, { abi, address, args, function
+             args,
+             docsPath: '/docs/contract/simulateContract',
+             functionName,
+-            sender: account?.address,
++            sender: account && account.address,
+         });
+     }
+ }
+diff --git a/node_modules/viem/dist/esm/actions/public/estimateGas.js b/node_modules/viem/dist/esm/actions/public/estimateGas.js
+index addb44b..0e1c9eb 100644
+--- a/node_modules/viem/dist/esm/actions/public/estimateGas.js
++++ b/node_modules/viem/dist/esm/actions/public/estimateGas.js
+@@ -32,7 +32,7 @@ import { prepareRequest } from '../../utils/transaction/prepareRequest.js';
+  * })
+  */
+ export async function estimateGas(client, args) {
+-    const account_ = args.account ?? client.account;
++    const account_ = args.account || client.account;
+     if (!account_)
+         throw new AccountNotFoundError({
+             docsPath: '/docs/actions/public/estimateGas',
+@@ -43,7 +43,7 @@ export async function estimateGas(client, args) {
+         const blockNumberHex = blockNumber ? numberToHex(blockNumber) : undefined;
+         const block = blockNumberHex || blockTag;
+         assertRequest(args);
+-        const format = client.chain?.formatters?.transactionRequest?.format ||
++        const format = client.chain && client.chain.formatters && client.chain.formatters.transactionRequest && client.chain.formatters.transactionRequest.format ||
+             formatTransactionRequest;
+         const request = format({
+             // Pick out extra data that might exist on the chain's transaction request type.
+diff --git a/node_modules/viem/dist/esm/actions/public/getBlock.js b/node_modules/viem/dist/esm/actions/public/getBlock.js
+index 95a7994..ba7ab45 100644
+--- a/node_modules/viem/dist/esm/actions/public/getBlock.js
++++ b/node_modules/viem/dist/esm/actions/public/getBlock.js
+@@ -42,7 +42,7 @@ export async function getBlock(client, { blockHash, blockNumber, blockTag = 'lat
+     }
+     if (!block)
+         throw new BlockNotFoundError({ blockHash, blockNumber });
+-    const format = client.chain?.formatters?.block?.format || formatBlock;
++    const format = client.chain && client.chain.formatters && client.chain.formatters.block && client.chain.formatters.block.format || formatBlock;
+     return format(block);
+ }
+ //# sourceMappingURL=getBlock.js.map
+diff --git a/node_modules/viem/dist/esm/actions/public/getFilterChanges.js b/node_modules/viem/dist/esm/actions/public/getFilterChanges.js
+index 43ad6af..c03ac7b 100644
+--- a/node_modules/viem/dist/esm/actions/public/getFilterChanges.js
++++ b/node_modules/viem/dist/esm/actions/public/getFilterChanges.js
+@@ -113,7 +113,7 @@ export async function getFilterChanges(_client, { filter, }) {
+                 if ('strict' in filter && filter.strict)
+                     return;
+                 eventName = err.abiItem.name;
+-                isUnnamed = err.abiItem.inputs?.some((x) => !('name' in x && x.name));
++                isUnnamed = err.abiItem.inputs && err.abiItem.inputs.some((x) => !('name' in x && x.name));
+             }
+             // Set args undefined if there is an error decoding (e.g. indexed/non-indexed params mismatch).
+             return formatLog(log, { args: isUnnamed ? [] : {}, eventName });
+diff --git a/node_modules/viem/dist/esm/actions/public/getFilterLogs.js b/node_modules/viem/dist/esm/actions/public/getFilterLogs.js
+index 875f855..3b73dc7 100644
+--- a/node_modules/viem/dist/esm/actions/public/getFilterLogs.js
++++ b/node_modules/viem/dist/esm/actions/public/getFilterLogs.js
+@@ -29,7 +29,7 @@ import { formatLog } from '../../utils/formatters/log.js';
+  * const logs = await getFilterLogs(client, { filter })
+  */
+ export async function getFilterLogs(_client, { filter }) {
+-    const strict = filter.strict ?? false;
++    const strict = filter.strict || false;
+     const logs = await filter.request({
+         method: 'eth_getFilterLogs',
+         params: [filter.id],
+@@ -56,7 +56,7 @@ export async function getFilterLogs(_client, { filter }) {
+                 if ('strict' in filter && filter.strict)
+                     return;
+                 eventName = err.abiItem.name;
+-                isUnnamed = err.abiItem.inputs?.some((x) => !('name' in x && x.name));
++                isUnnamed = err.abiItem.inputs && err.abiItem.inputs.some((x) => !('name' in x && x.name));
+             }
+             // Set args to empty if there is an error decoding (e.g. indexed/non-indexed params mismatch).
+             return formatLog(log, { args: isUnnamed ? [] : {}, eventName });
+diff --git a/node_modules/viem/dist/esm/actions/public/getLogs.js b/node_modules/viem/dist/esm/actions/public/getLogs.js
+index 4eda176..65cc651 100644
+--- a/node_modules/viem/dist/esm/actions/public/getLogs.js
++++ b/node_modules/viem/dist/esm/actions/public/getLogs.js
+@@ -26,7 +26,7 @@ import { formatLog } from '../../utils/formatters/log.js';
+  * const logs = await getLogs(client)
+  */
+ export async function getLogs(client, { address, blockHash, fromBlock, toBlock, event, args, strict: strict_, } = {}) {
+-    const strict = strict_ ?? false;
++    const strict = strict_ || false;
+     let topics = [];
+     if (event)
+         topics = encodeEventTopics({
+@@ -76,7 +76,7 @@ export async function getLogs(client, { address, blockHash, fromBlock, toBlock,
+                 if (strict)
+                     return;
+                 eventName = err.abiItem.name;
+-                isUnnamed = err.abiItem.inputs?.some((x) => !('name' in x && x.name));
++                isUnnamed = err.abiItem.inputs && err.abiItem.inputs.some((x) => !('name' in x && x.name));
+             }
+             // Set args to empty if there is an error decoding (e.g. indexed/non-indexed params mismatch).
+             return formatLog(log, { args: isUnnamed ? [] : {}, eventName });
+diff --git a/node_modules/viem/dist/esm/actions/public/getTransaction.js b/node_modules/viem/dist/esm/actions/public/getTransaction.js
+index 4e233f2..a55ee2c 100644
+--- a/node_modules/viem/dist/esm/actions/public/getTransaction.js
++++ b/node_modules/viem/dist/esm/actions/public/getTransaction.js
+@@ -54,7 +54,7 @@ export async function getTransaction(client, { blockHash, blockNumber, blockTag
+             hash,
+             index,
+         });
+-    const format = client.chain?.formatters?.transaction?.format || formatTransaction;
++    const format = client.chain && client.chain.formatters && client.chain.formatters.transaction && client.chain.formatters.transaction.format || formatTransaction;
+     return format(transaction);
+ }
+ //# sourceMappingURL=getTransaction.js.map
+diff --git a/node_modules/viem/dist/esm/actions/public/getTransactionConfirmations.js b/node_modules/viem/dist/esm/actions/public/getTransactionConfirmations.js
+index f98c100..4d8af8f 100644
+--- a/node_modules/viem/dist/esm/actions/public/getTransactionConfirmations.js
++++ b/node_modules/viem/dist/esm/actions/public/getTransactionConfirmations.js
+@@ -29,7 +29,7 @@ export async function getTransactionConfirmations(client, { hash, transactionRec
+         getBlockNumber(client),
+         hash ? getTransaction(client, { hash }) : undefined,
+     ]);
+-    const transactionBlockNumber = transactionReceipt?.blockNumber || transaction?.blockNumber;
++    const transactionBlockNumber = transactionReceipt && transactionReceipt.blockNumber || (transaction && transaction.blockNumber);
+     if (!transactionBlockNumber)
+         return 0n;
+     return blockNumber - transactionBlockNumber + 1n;
+diff --git a/node_modules/viem/dist/esm/actions/public/getTransactionReceipt.js b/node_modules/viem/dist/esm/actions/public/getTransactionReceipt.js
+index c944da7..d54ab4d 100644
+--- a/node_modules/viem/dist/esm/actions/public/getTransactionReceipt.js
++++ b/node_modules/viem/dist/esm/actions/public/getTransactionReceipt.js
+@@ -31,7 +31,7 @@ export async function getTransactionReceipt(client, { hash }) {
+     });
+     if (!receipt)
+         throw new TransactionReceiptNotFoundError({ hash });
+-    const format = client.chain?.formatters?.transactionReceipt?.format ||
++    const format = client.chain && client.chain.formatters && client.chain.formatters.transactionReceipt && client.chain.formatters.transactionReceipt.format ||
+         formatTransactionReceipt;
+     return format(receipt);
+ }
+diff --git a/node_modules/viem/dist/esm/actions/public/multicall.js b/node_modules/viem/dist/esm/actions/public/multicall.js
+index f2c0408..7c9c02c 100644
+--- a/node_modules/viem/dist/esm/actions/public/multicall.js
++++ b/node_modules/viem/dist/esm/actions/public/multicall.js
+@@ -47,8 +47,8 @@ import { readContract } from './readContract.js';
+  */
+ export async function multicall(client, args) {
+     const { allowFailure = true, batchSize: batchSize_, blockNumber, blockTag, contracts: contracts_, multicallAddress: multicallAddress_, } = args;
+-    const batchSize = batchSize_ ??
+-        ((typeof client.batch?.multicall === 'object' &&
++    const batchSize = batchSize_ ||
++        ((typeof (client.batch && client.batch.multicall) === 'object' &&
+             client.batch.multicall.batchSize) ||
+             1024);
+     // Fix type cast from `Narrow` in type definition.
+diff --git a/node_modules/viem/dist/esm/actions/public/simulateContract.js b/node_modules/viem/dist/esm/actions/public/simulateContract.js
+index 09ec5d4..806086f 100644
+--- a/node_modules/viem/dist/esm/actions/public/simulateContract.js
++++ b/node_modules/viem/dist/esm/actions/public/simulateContract.js
+@@ -75,7 +75,7 @@ export async function simulateContract(client, { abi, address, args, dataSuffix,
+             args,
+             docsPath: '/docs/contract/simulateContract',
+             functionName,
+-            sender: account?.address,
++            sender: account && account.address,
+         });
+     }
+ }
+diff --git a/node_modules/viem/dist/esm/actions/public/verifyHash.js b/node_modules/viem/dist/esm/actions/public/verifyHash.js
+index c518331..e75f12a 100644
+--- a/node_modules/viem/dist/esm/actions/public/verifyHash.js
++++ b/node_modules/viem/dist/esm/actions/public/verifyHash.js
+@@ -22,7 +22,7 @@ export async function verifyHash(client, { address, hash, signature, ...callRequ
+             }),
+             ...callRequest,
+         });
+-        return isBytesEqual(data ?? '0x0', '0x1');
++        return isBytesEqual(data || '0x0', '0x1');
+     }
+     catch (error) {
+         if (error instanceof CallExecutionError) {
+diff --git a/node_modules/viem/dist/esm/actions/public/waitForTransactionReceipt.js b/node_modules/viem/dist/esm/actions/public/waitForTransactionReceipt.js
+index f6cdec0..27779a8 100644
+--- a/node_modules/viem/dist/esm/actions/public/waitForTransactionReceipt.js
++++ b/node_modules/viem/dist/esm/actions/public/waitForTransactionReceipt.js
+@@ -135,7 +135,7 @@ export async function waitForTransactionReceipt(client, { confirmations = 1, has
+                                 reason = 'cancelled';
+                             }
+                             done(() => {
+-                                emit.onReplaced?.({
++                                emit.onReplaced && emit.onReplaced({
+                                     reason,
+                                     replacedTransaction: replacedTransaction,
+                                     transaction: replacementTransaction,
+diff --git a/node_modules/viem/dist/esm/actions/public/watchBlockNumber.js b/node_modules/viem/dist/esm/actions/public/watchBlockNumber.js
+index d1ba32a..de4426d 100644
+--- a/node_modules/viem/dist/esm/actions/public/watchBlockNumber.js
++++ b/node_modules/viem/dist/esm/actions/public/watchBlockNumber.js
+@@ -64,7 +64,7 @@ export function watchBlockNumber(client, { emitOnBegin = false, emitMissed = fal
+                 }
+             }
+             catch (err) {
+-                emit.onError?.(err);
++                emit.onError && emit.onError(err);
+             }
+         }, {
+             emitOnBegin,
+@@ -81,12 +81,12 @@ export function watchBlockNumber(client, { emitOnBegin = false, emitMissed = fal
+                     onData(data) {
+                         if (!active)
+                             return;
+-                        const blockNumber = hexToBigInt(data.result?.number);
++                        const blockNumber = hexToBigInt(data.result && data.result.number);
+                         onBlockNumber(blockNumber, prevBlockNumber);
+                         prevBlockNumber = blockNumber;
+                     },
+                     onError(error) {
+-                        onError?.(error);
++                        onError && onError(error);
+                     },
+                 });
+                 unsubscribe = unsubscribe_;
+@@ -94,7 +94,7 @@ export function watchBlockNumber(client, { emitOnBegin = false, emitMissed = fal
+                     unsubscribe();
+             }
+             catch (err) {
+-                onError?.(err);
++                onError && onError(err);
+             }
+         })();
+         return unsubscribe;
+diff --git a/node_modules/viem/dist/esm/actions/public/watchBlocks.js b/node_modules/viem/dist/esm/actions/public/watchBlocks.js
+index 34d70e8..0f968ae 100644
+--- a/node_modules/viem/dist/esm/actions/public/watchBlocks.js
++++ b/node_modules/viem/dist/esm/actions/public/watchBlocks.js
+@@ -46,7 +46,7 @@ export function watchBlocks(client, { blockTag = 'latest', emitMissed = false, e
+                     blockTag,
+                     includeTransactions,
+                 });
+-                if (block.number && prevBlock?.number) {
++                if (block.number && prevBlock && prevBlock.number) {
+                     // If the current block number is the same as the previous,
+                     // we can skip.
+                     if (block.number === prevBlock.number)
+@@ -54,7 +54,7 @@ export function watchBlocks(client, { blockTag = 'latest', emitMissed = false, e
+                     // If we have missed out on some previous blocks, and the
+                     // `emitMissed` flag is truthy, let's emit those blocks.
+                     if (block.number - prevBlock.number > 1 && emitMissed) {
+-                        for (let i = prevBlock?.number + 1n; i < block.number; i++) {
++                        for (let i = prevBlock.number + 1n; i < block.number; i++) {
+                             const block = await getBlock(client, {
+                                 blockNumber: i,
+                                 includeTransactions,
+@@ -66,9 +66,9 @@ export function watchBlocks(client, { blockTag = 'latest', emitMissed = false, e
+                 }
+                 if (
+                 // If no previous block exists, emit.
+-                !prevBlock?.number ||
++                !(prevBlock && prevBlock.number) ||
+                     // If the block tag is "pending" with no block number, emit.
+-                    (blockTag === 'pending' && !block?.number) ||
++                    (blockTag === 'pending' && !(block && block.number)) ||
+                     // If the next block number is greater than the previous block number, emit.
+                     // We don't want to emit blocks in the past.
+                     (block.number && block.number > prevBlock.number)) {
+@@ -77,7 +77,7 @@ export function watchBlocks(client, { blockTag = 'latest', emitMissed = false, e
+                 }
+             }
+             catch (err) {
+-                emit.onError?.(err);
++                emit.onError && emit.onError(err);
+             }
+         }, {
+             emitOnBegin,
+@@ -94,13 +94,13 @@ export function watchBlocks(client, { blockTag = 'latest', emitMissed = false, e
+                     onData(data) {
+                         if (!active)
+                             return;
+-                        const format = client.chain?.formatters?.block?.format || formatBlock;
++                        const format = client.chain && client.chain.formatters && client.chain.formatters.block && client.chain.formatters.block.format || formatBlock;
+                         const block = format(data.result);
+                         onBlock(block, prevBlock);
+                         prevBlock = block;
+                     },
+                     onError(error) {
+-                        onError?.(error);
++                        onError && onError(error);
+                     },
+                 });
+                 unsubscribe = unsubscribe_;
+@@ -108,7 +108,7 @@ export function watchBlocks(client, { blockTag = 'latest', emitMissed = false, e
+                     unsubscribe();
+             }
+             catch (err) {
+-                onError?.(err);
++                onError && onError(err);
+             }
+         })();
+         return unsubscribe;
+diff --git a/node_modules/viem/dist/esm/actions/public/watchContractEvent.js b/node_modules/viem/dist/esm/actions/public/watchContractEvent.js
+index 49d3b0c..8cbb14e 100644
+--- a/node_modules/viem/dist/esm/actions/public/watchContractEvent.js
++++ b/node_modules/viem/dist/esm/actions/public/watchContractEvent.js
+@@ -47,7 +47,7 @@ export function watchContractEvent(client, { abi, address, args, batch = true, e
+         eventName,
+         pollingInterval,
+     ]);
+-    const strict = strict_ ?? false;
++    const strict = strict_ || false;
+     return observe(observerId, { onLogs, onError }, (emit) => {
+         let previousBlockNumber;
+         let filter;
+@@ -105,7 +105,7 @@ export function watchContractEvent(client, { abi, address, args, batch = true, e
+                     logs.forEach((log) => emit.onLogs([log]));
+             }
+             catch (err) {
+-                emit.onError?.(err);
++                emit.onError && emit.onError(err);
+             }
+         }, {
+             emitOnBegin: true,
+diff --git a/node_modules/viem/dist/esm/actions/public/watchEvent.js b/node_modules/viem/dist/esm/actions/public/watchEvent.js
+index 1ee4ae9..1dd94d7 100644
+--- a/node_modules/viem/dist/esm/actions/public/watchEvent.js
++++ b/node_modules/viem/dist/esm/actions/public/watchEvent.js
+@@ -48,7 +48,7 @@ export function watchEvent(client, { address, args, batch = true, event, onError
+         event,
+         pollingInterval,
+     ]);
+-    const strict = strict_ ?? false;
++    const strict = strict_ || false;
+     return observe(observerId, { onLogs, onError }, (emit) => {
+         let previousBlockNumber;
+         let filter;
+@@ -102,7 +102,7 @@ export function watchEvent(client, { address, args, batch = true, event, onError
+                     logs.forEach((log) => emit.onLogs([log]));
+             }
+             catch (err) {
+-                emit.onError?.(err);
++                emit.onError && emit.onError(err);
+             }
+         }, {
+             emitOnBegin: true,
+diff --git a/node_modules/viem/dist/esm/actions/public/watchPendingTransactions.js b/node_modules/viem/dist/esm/actions/public/watchPendingTransactions.js
+index 8e69130..6d5416d 100644
+--- a/node_modules/viem/dist/esm/actions/public/watchPendingTransactions.js
++++ b/node_modules/viem/dist/esm/actions/public/watchPendingTransactions.js
+@@ -65,7 +65,7 @@ export function watchPendingTransactions(client, { batch = true, onError, onTran
+                         hashes.forEach((hash) => emit.onTransactions([hash]));
+                 }
+                 catch (err) {
+-                    emit.onError?.(err);
++                    emit.onError && emit.onError(err);
+                 }
+             }, {
+                 emitOnBegin: true,
+@@ -92,7 +92,7 @@ export function watchPendingTransactions(client, { batch = true, onError, onTran
+                         onTransactions([transaction]);
+                     },
+                     onError(error) {
+-                        onError?.(error);
++                        onError && onError(error);
+                     },
+                 });
+                 unsubscribe = unsubscribe_;
+@@ -100,7 +100,7 @@ export function watchPendingTransactions(client, { batch = true, onError, onTran
+                     unsubscribe();
+             }
+             catch (err) {
+-                onError?.(err);
++                onError && onError(err);
+             }
+         })();
+         return unsubscribe;
+diff --git a/node_modules/viem/dist/esm/actions/test/sendUnsignedTransaction.js b/node_modules/viem/dist/esm/actions/test/sendUnsignedTransaction.js
+index 496eb48..3e525fb 100644
+--- a/node_modules/viem/dist/esm/actions/test/sendUnsignedTransaction.js
++++ b/node_modules/viem/dist/esm/actions/test/sendUnsignedTransaction.js
+@@ -27,7 +27,7 @@ import { formatTransactionRequest, } from '../../utils/formatters/transactionReq
+  */
+ export async function sendUnsignedTransaction(client, args) {
+     const { accessList, data, from, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, ...rest } = args;
+-    const format = client.chain?.formatters?.transactionRequest?.format ||
++    const format = client.chain && client.chain.formatters && client.chain.formatters.transactionRequest && client.chain.formatters.transactionRequest.format ||
+         formatTransactionRequest;
+     const request = format({
+         // Pick out extra data that might exist on the chain's transaction request type.
+diff --git a/node_modules/viem/dist/esm/actions/wallet/sendTransaction.js b/node_modules/viem/dist/esm/actions/wallet/sendTransaction.js
+index 0c218ab..8e8d0ea 100644
+--- a/node_modules/viem/dist/esm/actions/wallet/sendTransaction.js
++++ b/node_modules/viem/dist/esm/actions/wallet/sendTransaction.js
+@@ -87,7 +87,7 @@ export async function sendTransaction(client, args) {
+             });
+             if (!chainId)
+                 chainId = await getChainId(client);
+-            const serializer = chain?.serializers?.transaction;
++            const serializer = chain && chain.serializers && chain.serializers.transaction;
+             const signedRequest = (await account.signTransaction({
+                 ...request,
+                 chainId,
+@@ -97,7 +97,7 @@ export async function sendTransaction(client, args) {
+                 params: [signedRequest],
+             });
+         }
+-        const format = chain?.formatters?.transactionRequest?.format || formatTransactionRequest;
++        const format = chain.formatters && chain.formatters.transactionRequest && chain.formatters.transactionRequest.format || formatTransactionRequest;
+         const request = format({
+             // Pick out extra data that might exist on the chain's transaction request type.
+             ...extract(rest, { format }),
+diff --git a/node_modules/viem/dist/esm/actions/wallet/signTypedData.js b/node_modules/viem/dist/esm/actions/wallet/signTypedData.js
+index e862a28..9ba8b71 100644
+--- a/node_modules/viem/dist/esm/actions/wallet/signTypedData.js
++++ b/node_modules/viem/dist/esm/actions/wallet/signTypedData.js
+@@ -109,17 +109,17 @@ export async function signTypedData(client, { account: account_ = client.account
+     const account = parseAccount(account_);
+     const types = {
+         EIP712Domain: [
+-            typeof domain?.name === 'string' && { name: 'name', type: 'string' },
+-            domain?.version && { name: 'version', type: 'string' },
+-            typeof domain?.chainId === 'number' && {
++            typeof (domain && domain.name === 'string') && { name: 'name', type: 'string' },
++            (domain && domain.version) && { name: 'version', type: 'string' },
++            typeof (domain && domain.chainId === 'number') && {
+                 name: 'chainId',
+                 type: 'uint256',
+             },
+-            domain?.verifyingContract && {
++            domain && domain.verifyingContract && {
+                 name: 'verifyingContract',
+                 type: 'address',
+             },
+-            domain?.salt && { name: 'salt', type: 'bytes32' },
++            domain && domain.salt && { name: 'salt', type: 'bytes32' },
+         ].filter(Boolean),
+         ...types_,
+     };
+@@ -138,7 +138,7 @@ export async function signTypedData(client, { account: account_ = client.account
+             types,
+             message,
+         });
+-    const typedData = stringify({ domain: domain ?? {}, primaryType, types, message }, (_, value) => (isHex(value) ? value.toLowerCase() : value));
++    const typedData = stringify({ domain: domain || {}, primaryType, types, message }, (_, value) => (isHex(value) ? value.toLowerCase() : value));
+     return client.request({
+         method: 'eth_signTypedData_v4',
+         params: [account.address, typedData],
+diff --git a/node_modules/viem/dist/esm/chains/formatters/celo.js b/node_modules/viem/dist/esm/chains/formatters/celo.js
+index 176080e..96bf8de 100644
+--- a/node_modules/viem/dist/esm/chains/formatters/celo.js
++++ b/node_modules/viem/dist/esm/chains/formatters/celo.js
+@@ -9,7 +9,7 @@ export const formattersCelo = {
+     block: /*#__PURE__*/ defineBlock({
+         exclude: ['difficulty', 'gasLimit', 'mixHash', 'nonce', 'uncles'],
+         format(args) {
+-            const transactions = args.transactions?.map((transaction) => {
++            const transactions = args.transactions && args.transactions.map((transaction) => {
+                 if (typeof transaction === 'string')
+                     return transaction;
+                 return {
+diff --git a/node_modules/viem/dist/esm/chains/formatters/optimism.js b/node_modules/viem/dist/esm/chains/formatters/optimism.js
+index d58d939..962e755 100644
+--- a/node_modules/viem/dist/esm/chains/formatters/optimism.js
++++ b/node_modules/viem/dist/esm/chains/formatters/optimism.js
+@@ -5,7 +5,7 @@ import { defineTransaction, formatTransaction, } from '../../utils/formatters/tr
+ export const formattersOptimism = {
+     block: /*#__PURE__*/ defineBlock({
+         format(args) {
+-            const transactions = args.transactions?.map((transaction) => {
++            const transactions = args.transactions && args.transactions.map((transaction) => {
+                 if (typeof transaction === 'string')
+                     return transaction;
+                 const formatted = formatTransaction(transaction);
+diff --git a/node_modules/viem/dist/esm/chains/serializers/celo.js b/node_modules/viem/dist/esm/chains/serializers/celo.js
+index 29b917e..c21b584 100644
+--- a/node_modules/viem/dist/esm/chains/serializers/celo.js
++++ b/node_modules/viem/dist/esm/chains/serializers/celo.js
+@@ -33,12 +33,12 @@ function serializeTransactionCIP42(transaction, signature) {
+         maxPriorityFeePerGas ? toHex(maxPriorityFeePerGas) : '0x',
+         maxFeePerGas ? toHex(maxFeePerGas) : '0x',
+         gas ? toHex(gas) : '0x',
+-        feeCurrency ?? '0x',
+-        gatewayFeeRecipient ?? '0x',
++        feeCurrency || '0x',
++        gatewayFeeRecipient || '0x',
+         gatewayFee ? toHex(gatewayFee) : '0x',
+-        to ?? '0x',
++        to || '0x',
+         value ? toHex(value) : '0x',
+-        data ?? '0x',
++        data || '0x',
+         serializeAccessList(accessList),
+     ];
+     if (signature) {
+@@ -82,7 +82,7 @@ function assertTransactionCIP42(transaction) {
+         (gatewayFeeRecipient && !gatewayFee)) {
+         throw new BaseError('`gatewayFee` and `gatewayFeeRecipient` must be provided together.');
+     }
+-    if (feeCurrency && !feeCurrency?.startsWith('0x')) {
++    if (feeCurrency && !feeCurrency && feeCurrency.startsWith('0x')) {
+         throw new BaseError('`feeCurrency` MUST be a token address for CIP-42 transactions.');
+     }
+     if (!feeCurrency && !gatewayFeeRecipient) {
+diff --git a/node_modules/viem/dist/esm/clients/transports/custom.js b/node_modules/viem/dist/esm/clients/transports/custom.js
+index fb309c9..02be689 100644
+--- a/node_modules/viem/dist/esm/clients/transports/custom.js
++++ b/node_modules/viem/dist/esm/clients/transports/custom.js
+@@ -8,7 +8,7 @@ export function custom(provider, config = {}) {
+         key,
+         name,
+         request: provider.request.bind(provider),
+-        retryCount: config.retryCount ?? defaultRetryCount,
++        retryCount: config.retryCount || defaultRetryCount,
+         retryDelay,
+         type: 'custom',
+     });
+diff --git a/node_modules/viem/dist/esm/clients/transports/fallback.js b/node_modules/viem/dist/esm/clients/transports/fallback.js
+index f08f9e7..787cea1 100644
+--- a/node_modules/viem/dist/esm/clients/transports/fallback.js
++++ b/node_modules/viem/dist/esm/clients/transports/fallback.js
+@@ -58,7 +58,7 @@ export function fallback(transports_, config = {}) {
+             const rankOptions = (typeof rank === 'object' ? rank : {});
+             rankTransports({
+                 chain,
+-                interval: rankOptions.interval ?? pollingInterval,
++                interval: rankOptions.interval || pollingInterval,
+                 onTransports: (transports_) => (transports = transports_),
+                 sampleCount: rankOptions.sampleCount,
+                 timeout: rankOptions.timeout,
+diff --git a/node_modules/viem/dist/esm/clients/transports/http.js b/node_modules/viem/dist/esm/clients/transports/http.js
+index d711baf..5881010 100644
+--- a/node_modules/viem/dist/esm/clients/transports/http.js
++++ b/node_modules/viem/dist/esm/clients/transports/http.js
+@@ -12,9 +12,9 @@ url, config = {}) {
+     const { batch, fetchOptions, key = 'http', name = 'HTTP JSON-RPC', retryDelay, } = config;
+     return ({ chain, retryCount: retryCount_, timeout: timeout_ }) => {
+         const { batchSize = 1000, wait = 0 } = typeof batch === 'object' ? batch : {};
+-        const retryCount = config.retryCount ?? retryCount_;
+-        const timeout = timeout_ ?? config.timeout ?? 10000;
+-        const url_ = url || chain?.rpcUrls.default.http[0];
++        const retryCount = config.retryCount || retryCount_;
++        const timeout = timeout_ || config.timeout || 10000;
++        const url_ = url || (chain && chain.rpcUrls.default.http[0]);
+         if (!url_)
+             throw new UrlRequiredError();
+         return createTransport({
+diff --git a/node_modules/viem/dist/esm/clients/transports/webSocket.js b/node_modules/viem/dist/esm/clients/transports/webSocket.js
+index 618c53b..6eaa42c 100644
+--- a/node_modules/viem/dist/esm/clients/transports/webSocket.js
++++ b/node_modules/viem/dist/esm/clients/transports/webSocket.js
+@@ -10,9 +10,9 @@ export function webSocket(
+ url, config = {}) {
+     const { key = 'webSocket', name = 'WebSocket JSON-RPC', retryDelay } = config;
+     return ({ chain, retryCount: retryCount_, timeout: timeout_ }) => {
+-        const retryCount = config.retryCount ?? retryCount_;
+-        const timeout = timeout_ ?? config.timeout ?? 10000;
+-        const url_ = url || chain?.rpcUrls.default.webSocket?.[0];
++        const retryCount = config.retryCount || retryCount_;
++        const timeout = timeout_ || config.timeout || 10000;
++        const url_ = url || (chain && chain.rpcUrls.default.webSocket && chain.rpcUrls.default.webSocket[0]);
+         if (!url_)
+             throw new UrlRequiredError();
+         return createTransport({
+@@ -51,7 +51,7 @@ url, config = {}) {
+                     onResponse(response) {
+                         if (response.error) {
+                             reject(response.error);
+-                            onError?.(response.error);
++                            onError && onError(response.error);
+                             return;
+                         }
+                         if (typeof response.id === 'number') {
+diff --git a/node_modules/viem/dist/esm/errors/base.js b/node_modules/viem/dist/esm/errors/base.js
+index d2ea668..665eb77 100644
+--- a/node_modules/viem/dist/esm/errors/base.js
++++ b/node_modules/viem/dist/esm/errors/base.js
+@@ -40,7 +40,7 @@ export class BaseError extends Error {
+         });
+         const details = args.cause instanceof BaseError
+             ? args.cause.details
+-            : args.cause?.message
++            : args.cause && args.cause.message
+                 ? args.cause.message
+                 : args.details;
+         const docsPath = args.cause instanceof BaseError
+@@ -70,7 +70,7 @@ export class BaseError extends Error {
+     }
+ }
+ function walk(err, fn) {
+-    if (fn?.(err))
++    if (fn && fn(err))
+         return err;
+     if (err && typeof err === 'object' && 'cause' in err)
+         return walk(err.cause, fn);
+diff --git a/node_modules/viem/dist/esm/errors/ccip.js b/node_modules/viem/dist/esm/errors/ccip.js
+index 0bd2dd6..e2e3b0b 100644
+--- a/node_modules/viem/dist/esm/errors/ccip.js
++++ b/node_modules/viem/dist/esm/errors/ccip.js
+@@ -8,7 +8,7 @@ export class OffchainLookupError extends BaseError {
+             cause,
+             metaMessages: [
+                 ...(cause.metaMessages || []),
+-                cause.metaMessages?.length ? '' : [],
++                (cause.metaMessages && cause.metaMessages.length) ? '' : [],
+                 'Offchain Gateway Call:',
+                 urls && [
+                     '  Gateway URL(s):',
+diff --git a/node_modules/viem/dist/esm/errors/contract.js b/node_modules/viem/dist/esm/errors/contract.js
+index e4c8a39..94097a9 100644
+--- a/node_modules/viem/dist/esm/errors/contract.js
++++ b/node_modules/viem/dist/esm/errors/contract.js
+@@ -13,10 +13,10 @@ export class CallExecutionError extends BaseError {
+     constructor(cause, { account: account_, docsPath, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, }) {
+         const account = account_ ? parseAccount(account_) : undefined;
+         const prettyArgs = prettyPrint({
+-            from: account?.address,
++            from: account && account.address,
+             to,
+             value: typeof value !== 'undefined' &&
+-                `${formatEther(value)} ${chain?.nativeCurrency.symbol || 'ETH'}`,
++                `${formatEther(value)} ${chain && chain.nativeCurrency.symbol || 'ETH'}`,
+             data,
+             gas,
+             gasPrice: typeof gasPrice !== 'undefined' && `${formatGwei(gasPrice)} gwei`,
+@@ -69,7 +69,7 @@ export class ContractFunctionExecutionError extends BaseError {
+             function: functionWithParams,
+             args: formattedArgs &&
+                 formattedArgs !== '()' &&
+-                `${[...Array(functionName?.length ?? 0).keys()]
++                `${[...Array(functionName && functionName.length || 0).keys()]
+                     .map(() => ' ')
+                     .join('')}${formattedArgs}`,
+             sender,
+@@ -170,7 +170,7 @@ export class ContractFunctionRevertedError extends BaseError {
+                 metaMessages = [
+                     errorWithParams ? `Error: ${errorWithParams}` : '',
+                     formattedArgs && formattedArgs !== '()'
+-                        ? `       ${[...Array(errorName?.length ?? 0).keys()]
++                        ? `       ${[...Array(errorName && errorName.length || 0).keys()]
+                             .map(() => ' ')
+                             .join('')}${formattedArgs}`
+                         : '',
+diff --git a/node_modules/viem/dist/esm/errors/estimateGas.js b/node_modules/viem/dist/esm/errors/estimateGas.js
+index 845728d..6920073 100644
+--- a/node_modules/viem/dist/esm/errors/estimateGas.js
++++ b/node_modules/viem/dist/esm/errors/estimateGas.js
+@@ -5,10 +5,10 @@ import { prettyPrint } from './transaction.js';
+ export class EstimateGasExecutionError extends BaseError {
+     constructor(cause, { account, docsPath, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, }) {
+         const prettyArgs = prettyPrint({
+-            from: account?.address,
++            from: account && account.address,
+             to,
+             value: typeof value !== 'undefined' &&
+-                `${formatEther(value)} ${chain?.nativeCurrency.symbol || 'ETH'}`,
++                `${formatEther(value)} ${chain && chain.nativeCurrency.symbol || 'ETH'}`,
+             data,
+             gas,
+             gasPrice: typeof gasPrice !== 'undefined' && `${formatGwei(gasPrice)} gwei`,
+diff --git a/node_modules/viem/dist/esm/errors/node.js b/node_modules/viem/dist/esm/errors/node.js
+index 0a4083d..cee9918 100644
+--- a/node_modules/viem/dist/esm/errors/node.js
++++ b/node_modules/viem/dist/esm/errors/node.js
+@@ -11,9 +11,9 @@ import { BaseError } from './base.js';
+  */
+ class ExecutionRevertedError extends BaseError {
+     constructor({ cause, message, } = {}) {
+-        const reason = message
+-            ?.replace('execution reverted: ', '')
+-            ?.replace('execution reverted', '');
++        const reason = message && message
++            .replace('execution reverted: ', '')
++            .replace('execution reverted', '');
+         super(`Execution reverted ${reason ? `with reason: ${reason}` : 'for an unknown reason'}.`, {
+             cause,
+         });
+@@ -253,7 +253,7 @@ Object.defineProperty(TipAboveFeeCapError, "nodeMessage", {
+ export { TipAboveFeeCapError };
+ export class UnknownNodeError extends BaseError {
+     constructor({ cause }) {
+-        super(`An error occurred while executing: ${cause?.message}`, {
++        super(`An error occurred while executing: ${cause && cause.message}`, {
+             cause,
+         });
+         Object.defineProperty(this, "name", {
+diff --git a/node_modules/viem/dist/esm/errors/rpc.js b/node_modules/viem/dist/esm/errors/rpc.js
+index 9243a1f..310e810 100644
+--- a/node_modules/viem/dist/esm/errors/rpc.js
++++ b/node_modules/viem/dist/esm/errors/rpc.js
+@@ -11,7 +11,7 @@ export class RpcError extends BaseError {
+         super(shortMessage, {
+             cause,
+             docsPath,
+-            metaMessages: metaMessages || cause?.metaMessages,
++            metaMessages: metaMessages || (cause && cause.metaMessages),
+         });
+         Object.defineProperty(this, "name", {
+             enumerable: true,
+@@ -26,7 +26,7 @@ export class RpcError extends BaseError {
+             value: void 0
+         });
+         this.name = cause.name;
+-        this.code = (cause instanceof RpcRequestError ? cause.code : code ?? unknownErrorCode);
++        this.code = (cause instanceof RpcRequestError ? cause.code : code || unknownErrorCode);
+     }
+ }
+ /**
+diff --git a/node_modules/viem/dist/esm/errors/transaction.js b/node_modules/viem/dist/esm/errors/transaction.js
+index 5c19f97..9a6625e 100644
+--- a/node_modules/viem/dist/esm/errors/transaction.js
++++ b/node_modules/viem/dist/esm/errors/transaction.js
+@@ -128,11 +128,11 @@ export class InvalidStorageKeySizeError extends BaseError {
+ export class TransactionExecutionError extends BaseError {
+     constructor(cause, { account, docsPath, chain, data, gas, gasPrice, maxFeePerGas, maxPriorityFeePerGas, nonce, to, value, }) {
+         const prettyArgs = prettyPrint({
+-            chain: chain && `${chain?.name} (id: ${chain?.id})`,
+-            from: account?.address,
++            chain: chain && `${chain && chain.name} (id: ${chain && chain.id})`,
++            from: account && account.address,
+             to,
+             value: typeof value !== 'undefined' &&
+-                `${formatEther(value)} ${chain?.nativeCurrency.symbol || 'ETH'}`,
++                `${formatEther(value)} ${chain && chain.nativeCurrency.symbol || 'ETH'}`,
+             data,
+             gas,
+             gasPrice: typeof gasPrice !== 'undefined' && `${formatGwei(gasPrice)} gwei`,
+diff --git a/node_modules/viem/dist/esm/utils/abi/decodeAbiParameters.js b/node_modules/viem/dist/esm/utils/abi/decodeAbiParameters.js
+index 03ddac8..e567c7d 100644
+--- a/node_modules/viem/dist/esm/utils/abi/decodeAbiParameters.js
++++ b/node_modules/viem/dist/esm/utils/abi/decodeAbiParameters.js
+@@ -102,7 +102,7 @@ function decodeArray(data, { param, length, position, }) {
+         // Get the child type of the array.
+         const arrayComponents = getArrayComponents(param.type);
+         // If the child type is not known, the array is dynamic.
+-        const dynamicChild = !arrayComponents?.[0];
++        const dynamicChild = !(arrayComponents && arrayComponents[0]);
+         let consumed = 0;
+         const value = [];
+         for (let i = 0; i < length; ++i) {
+@@ -198,7 +198,7 @@ function decodeTuple(data, { param, position }) {
+                 position: consumed,
+             });
+             consumed += decodedChild.consumed;
+-            value[hasUnnamedChild ? i : component?.name] = decodedChild.value;
++            value[hasUnnamedChild ? i : (component && component.name)] = decodedChild.value;
+         }
+         return { consumed: 32, value };
+     }
+@@ -212,7 +212,7 @@ function decodeTuple(data, { param, position }) {
+             position: position + consumed,
+         });
+         consumed += decodedChild.consumed;
+-        value[hasUnnamedChild ? i : component?.name] = decodedChild.value;
++        value[hasUnnamedChild ? i : (component && component.name)] = decodedChild.value;
+     }
+     return { consumed, value };
+ }
+@@ -225,7 +225,7 @@ function hasDynamicChild(param) {
+     if (type.endsWith('[]'))
+         return true;
+     if (type === 'tuple')
+-        return param.components?.some(hasDynamicChild);
++        return param.components && param.components.some(hasDynamicChild);
+     const arrayComponents = getArrayComponents(param.type);
+     if (arrayComponents &&
+         hasDynamicChild({ ...param, type: arrayComponents[1] }))
+diff --git a/node_modules/viem/dist/esm/utils/abi/decodeEventLog.js b/node_modules/viem/dist/esm/utils/abi/decodeEventLog.js
+index 50b0697..6083f6a 100644
+--- a/node_modules/viem/dist/esm/utils/abi/decodeEventLog.js
++++ b/node_modules/viem/dist/esm/utils/abi/decodeEventLog.js
+@@ -4,7 +4,7 @@ import { decodeAbiParameters } from './decodeAbiParameters.js';
+ import { formatAbiItem } from './formatAbiItem.js';
+ const docsPath = '/docs/contract/decodeEventLog';
+ export function decodeEventLog({ abi, data, strict: strict_, topics, }) {
+-    const strict = strict_ ?? true;
++    const strict = strict_ || true;
+     const [signature, ...argTopics] = topics;
+     if (!signature)
+         throw new AbiEventSignatureEmptyTopicsError({
+@@ -17,7 +17,7 @@ export function decodeEventLog({ abi, data, strict: strict_, topics, }) {
+             docsPath,
+         });
+     const { name, inputs } = abiItem;
+-    const isUnnamed = inputs?.some((x) => !('name' in x && x.name));
++    const isUnnamed = inputs && inputs.some((x) => !('name' in x && x.name));
+     let args = isUnnamed ? [] : {};
+     // Decode topics (indexed args).
+     const indexedInputs = inputs.filter((x) => 'indexed' in x && x.indexed);
+diff --git a/node_modules/viem/dist/esm/utils/abi/encodeEventTopics.js b/node_modules/viem/dist/esm/utils/abi/encodeEventTopics.js
+index 781f5a9..70399f5 100644
+--- a/node_modules/viem/dist/esm/utils/abi/encodeEventTopics.js
++++ b/node_modules/viem/dist/esm/utils/abi/encodeEventTopics.js
+@@ -27,19 +27,19 @@ export function encodeEventTopics({ abi, eventName, args }) {
+     const signature = getEventSelector(definition);
+     let topics = [];
+     if (args && 'inputs' in abiItem) {
+-        const indexedInputs = abiItem.inputs?.filter((param) => 'indexed' in param && param.indexed);
++        const indexedInputs = abiItem.inputs && abiItem.inputs.filter((param) => 'indexed' in param && param.indexed);
+         const args_ = Array.isArray(args)
+             ? args
+             : Object.values(args).length > 0
+-                ? indexedInputs?.map((x) => args[x.name]) ?? []
++                ? indexedInputs && indexedInputs.map((x) => args[x.name]) || []
+                 : [];
+         if (args_.length > 0) {
+             topics =
+-                indexedInputs?.map((param, i) => Array.isArray(args_[i])
++                indexedInputs && indexedInputs.map((param, i) => Array.isArray(args_[i])
+                     ? args_[i].map((_, j) => encodeArg({ param, value: args_[i][j] }))
+                     : args_[i]
+                         ? encodeArg({ param, value: args_[i] })
+-                        : null) ?? [];
++                        : null) || [];
+         }
+     }
+     return [signature, ...topics];
+diff --git a/node_modules/viem/dist/esm/utils/abi/encodeFunctionData.js b/node_modules/viem/dist/esm/utils/abi/encodeFunctionData.js
+index deca833..abc4996 100644
+--- a/node_modules/viem/dist/esm/utils/abi/encodeFunctionData.js
++++ b/node_modules/viem/dist/esm/utils/abi/encodeFunctionData.js
+@@ -24,8 +24,8 @@ export function encodeFunctionData({ abi, args, functionName, }) {
+     const definition = formatAbiItem(abiItem);
+     const signature = getFunctionSelector(definition);
+     const data = 'inputs' in abiItem && abiItem.inputs
+-        ? encodeAbiParameters(abiItem.inputs, (args ?? []))
++        ? encodeAbiParameters(abiItem.inputs, (args || []))
+         : undefined;
+-    return concatHex([signature, data ?? '0x']);
++    return concatHex([signature, data || '0x']);
+ }
+ //# sourceMappingURL=encodeFunctionData.js.map
+diff --git a/node_modules/viem/dist/esm/utils/buildRequest.js b/node_modules/viem/dist/esm/utils/buildRequest.js
+index bc97262..4cd42a2 100644
+--- a/node_modules/viem/dist/esm/utils/buildRequest.js
++++ b/node_modules/viem/dist/esm/utils/buildRequest.js
+@@ -92,8 +92,8 @@ export function buildRequest(request, { retryDelay = 150, retryCount = 3, } = {}
+         delay: ({ count, error }) => {
+             // If we find a Retry-After header, let's retry after the given time.
+             if (error && error instanceof HttpRequestError) {
+-                const retryAfter = error?.headers?.get('Retry-After');
+-                if (retryAfter?.match(/\d/))
++                const retryAfter = error && error.headers && error.headers.get('Retry-After');
++                if (retryAfter && retryAfter.match(/\d/))
+                     return parseInt(retryAfter) * 1000;
+             }
+             // Otherwise, let's retry with an exponential backoff.
+diff --git a/node_modules/viem/dist/esm/utils/ccip.js b/node_modules/viem/dist/esm/utils/ccip.js
+index 63c1993..4eae0bf 100644
+--- a/node_modules/viem/dist/esm/utils/ccip.js
++++ b/node_modules/viem/dist/esm/utils/ccip.js
+@@ -79,7 +79,7 @@ export async function ccipFetch({ data, sender, urls, }) {
+                 method,
+             });
+             let result;
+-            if (response.headers.get('Content-Type')?.startsWith('application/json')) {
++            if (response.headers.get('Content-Type') && response.headers.get('Content-Type').startsWith('application/json')) {
+                 result = (await response.json()).data;
+             }
+             else {
+diff --git a/node_modules/viem/dist/esm/utils/chain.js b/node_modules/viem/dist/esm/utils/chain.js
+index 56e6c24..f2a2623 100644
+--- a/node_modules/viem/dist/esm/utils/chain.js
++++ b/node_modules/viem/dist/esm/utils/chain.js
+@@ -8,12 +8,12 @@ export function assertCurrentChain({ chain, currentChainId, }) {
+ export function defineChain(chain, config) {
+     return {
+         ...chain,
+-        formatters: config?.formatters,
+-        serializers: config?.serializers,
++        formatters: config && config.formatters,
++        serializers: config && config.serializers,
+     };
+ }
+ export function getChainContractAddress({ blockNumber, chain, contract: name, }) {
+-    const contract = chain?.contracts?.[name];
++    const contract = chain && chain.contracts && chain.contracts[name];
+     if (!contract)
+         throw new ChainDoesNotSupportContract({
+             chain,
+diff --git a/node_modules/viem/dist/esm/utils/contract/extractFunctionParts.js b/node_modules/viem/dist/esm/utils/contract/extractFunctionParts.js
+index 94d8709..9251897 100644
+--- a/node_modules/viem/dist/esm/utils/contract/extractFunctionParts.js
++++ b/node_modules/viem/dist/esm/utils/contract/extractFunctionParts.js
+@@ -1,9 +1,9 @@
+ const paramsRegex = /((function|event)\s)?(.*)(\((.*)\))/;
+ export function extractFunctionParts(def) {
+     const parts = def.match(paramsRegex);
+-    const type = parts?.[2] || undefined;
+-    const name = parts?.[3];
+-    const params = parts?.[5] || undefined;
++    const type = parts && parts[2] || undefined;
++    const name = parts && parts[3];
++    const params = parts && parts[5] || undefined;
+     return { type, name, params };
+ }
+ export function extractFunctionName(def) {
+@@ -11,8 +11,8 @@ export function extractFunctionName(def) {
+ }
+ export function extractFunctionParams(def) {
+     const params = extractFunctionParts(def).params;
+-    const splitParams = params?.split(',').map((x) => x.trim().split(' '));
+-    return splitParams?.map((param) => ({
++    const splitParams = params && params.split(',').map((x) => x.trim().split(' '));
++    return splitParams && splitParams.map((param) => ({
+         type: param[0],
+         name: param[1] === 'indexed' ? param[2] : param[1],
+         ...(param[1] === 'indexed' ? { indexed: true } : {}),
+diff --git a/node_modules/viem/dist/esm/utils/data/slice.js b/node_modules/viem/dist/esm/utils/data/slice.js
+index ff0700c..fc22252 100644
+--- a/node_modules/viem/dist/esm/utils/data/slice.js
++++ b/node_modules/viem/dist/esm/utils/data/slice.js
+@@ -61,7 +61,7 @@ export function sliceHex(value_, start, end, { strict } = {}) {
+     assertStartOffset(value_, start);
+     const value = `0x${value_
+         .replace('0x', '')
+-        .slice((start ?? 0) * 2, (end ?? value_.length) * 2)}`;
++        .slice((start || 0) * 2, (end || value_.length) * 2)}`;
+     if (strict)
+         assertEndOffset(value, start, end);
+     return value;
+diff --git a/node_modules/viem/dist/esm/utils/ens/avatar/utils.js b/node_modules/viem/dist/esm/utils/ens/avatar/utils.js
+index 9453cc4..7090061 100644
+--- a/node_modules/viem/dist/esm/utils/ens/avatar/utils.js
++++ b/node_modules/viem/dist/esm/utils/ens/avatar/utils.js
+@@ -10,7 +10,7 @@ export async function isImageUri(uri) {
+         // retrieve content type header to check if content is image
+         if (res.status === 200) {
+             const contentType = res.headers.get('content-type');
+-            return contentType?.startsWith('image/');
++            return contentType && contentType.startsWith('image/');
+         }
+         return false;
+     }
+@@ -47,16 +47,16 @@ export function resolveAvatarUri({ uri, gatewayUrls, }) {
+     const isEncoded = base64Regex.test(uri);
+     if (isEncoded)
+         return { uri, isOnChain: true, isEncoded };
+-    const ipfsGateway = getGateway(gatewayUrls?.ipfs, 'https://ipfs.io');
+-    const arweaveGateway = getGateway(gatewayUrls?.arweave, 'https://arweave.net');
++    const ipfsGateway = getGateway(gatewayUrls && gatewayUrls.ipfs, 'https://ipfs.io');
++    const arweaveGateway = getGateway(gatewayUrls && gatewayUrls.arweave, 'https://arweave.net');
+     const networkRegexMatch = uri.match(networkRegex);
+-    const { protocol, subpath, target, subtarget = '', } = networkRegexMatch?.groups || {};
++    const { protocol, subpath, target, subtarget = '', } = networkRegexMatch && networkRegexMatch.groups || {};
+     const isIPNS = protocol === 'ipns:/' || subpath === 'ipns/';
+     const isIPFS = protocol === 'ipfs:/' || subpath === 'ipfs/' || ipfsHashRegex.test(uri);
+     if (uri.startsWith('http') && !isIPNS && !isIPFS) {
+         let replacedUri = uri;
+-        if (gatewayUrls?.arweave)
+-            replacedUri = uri.replace(/https:\/\/arweave.net/g, gatewayUrls?.arweave);
++        if (gatewayUrls && gatewayUrls.arweave)
++            replacedUri = uri.replace(/https:\/\/arweave.net/g, gatewayUrls && gatewayUrls.arweave);
+         return { uri: replacedUri, isOnChain: false, isEncoded: false };
+     }
+     if ((isIPNS || isIPFS) && target) {
+diff --git a/node_modules/viem/dist/esm/utils/errors/getContractError.js b/node_modules/viem/dist/esm/utils/errors/getContractError.js
+index 901533a..0020bce 100644
+--- a/node_modules/viem/dist/esm/utils/errors/getContractError.js
++++ b/node_modules/viem/dist/esm/utils/errors/getContractError.js
+@@ -18,7 +18,7 @@ export function getContractError(err, { abi, address, args, docsPath, functionNa
+             abi,
+             data: typeof data === 'object' ? data.data : data,
+             functionName,
+-            message: shortMessage ?? message,
++            message: shortMessage || message,
+         });
+     }
+     return new ContractFunctionExecutionError(cause, {
+diff --git a/node_modules/viem/dist/esm/utils/errors/getNodeError.js b/node_modules/viem/dist/esm/utils/errors/getNodeError.js
+index 01b22cd..c039ff2 100644
+--- a/node_modules/viem/dist/esm/utils/errors/getNodeError.js
++++ b/node_modules/viem/dist/esm/utils/errors/getNodeError.js
+@@ -11,36 +11,36 @@ export function getNodeError(err, args) {
+     if (FeeCapTooHighError.nodeMessage.test(message))
+         return new FeeCapTooHighError({
+             cause: err,
+-            maxFeePerGas: args?.maxFeePerGas,
++            maxFeePerGas: args && args.maxFeePerGas,
+         });
+     else if (FeeCapTooLowError.nodeMessage.test(message))
+         return new FeeCapTooLowError({
+             cause: err,
+-            maxFeePerGas: args?.maxFeePerGas,
++            maxFeePerGas: args && args.maxFeePerGas,
+         });
+     else if (NonceTooHighError.nodeMessage.test(message))
+-        return new NonceTooHighError({ cause: err, nonce: args?.nonce });
++        return new NonceTooHighError({ cause: err, nonce: args && args.nonce });
+     else if (NonceTooLowError.nodeMessage.test(message))
+-        return new NonceTooLowError({ cause: err, nonce: args?.nonce });
++        return new NonceTooLowError({ cause: err, nonce: args && args.nonce });
+     else if (NonceMaxValueError.nodeMessage.test(message))
+-        return new NonceMaxValueError({ cause: err, nonce: args?.nonce });
++        return new NonceMaxValueError({ cause: err, nonce: args && args.nonce });
+     else if (InsufficientFundsError.nodeMessage.test(message))
+         return new InsufficientFundsError({ cause: err });
+     else if (IntrinsicGasTooHighError.nodeMessage.test(message))
+-        return new IntrinsicGasTooHighError({ cause: err, gas: args?.gas });
++        return new IntrinsicGasTooHighError({ cause: err, gas: args && args.gas });
+     else if (IntrinsicGasTooLowError.nodeMessage.test(message))
+-        return new IntrinsicGasTooLowError({ cause: err, gas: args?.gas });
++        return new IntrinsicGasTooLowError({ cause: err, gas: args && args.gas });
+     else if (TransactionTypeNotSupportedError.nodeMessage.test(message))
+         return new TransactionTypeNotSupportedError({ cause: err });
+     else if (TipAboveFeeCapError.nodeMessage.test(message))
+         return new TipAboveFeeCapError({
+             cause: err,
+-            maxFeePerGas: args?.maxFeePerGas,
+-            maxPriorityFeePerGas: args?.maxPriorityFeePerGas,
++            maxFeePerGas: args && args.maxFeePerGas,
++            maxPriorityFeePerGas: args && args.maxPriorityFeePerGas,
+         });
+     else if (message.match(ExecutionRevertedError.nodeMessage) ||
+         ('code' in err.cause &&
+-            err.cause?.code === ExecutionRevertedError.code))
++            (err.cause && err.cause.code) === ExecutionRevertedError.code))
+         return new ExecutionRevertedError({
+             cause: err,
+             message: err.cause.details || err.details,
+diff --git a/node_modules/viem/dist/esm/utils/filters/createFilterRequestScope.js b/node_modules/viem/dist/esm/utils/filters/createFilterRequestScope.js
+index ee8368c..67a0a08 100644
+--- a/node_modules/viem/dist/esm/utils/filters/createFilterRequestScope.js
++++ b/node_modules/viem/dist/esm/utils/filters/createFilterRequestScope.js
+@@ -6,7 +6,7 @@
+ export function createFilterRequestScope(client, { method }) {
+     const requestMap = {};
+     if (client.transport.type === 'fallback')
+-        client.transport.onResponse?.(({ method: method_, response: id, status, transport, }) => {
++        client.transport.onResponse && client.transport.onResponse(({ method: method_, response: id, status, transport, }) => {
+             if (status === 'success' && method === method_)
+                 requestMap[id] = transport.request;
+         });
+diff --git a/node_modules/viem/dist/esm/utils/formatters/block.js b/node_modules/viem/dist/esm/utils/formatters/block.js
+index 6531da6..e065cd5 100644
+--- a/node_modules/viem/dist/esm/utils/formatters/block.js
++++ b/node_modules/viem/dist/esm/utils/formatters/block.js
+@@ -1,7 +1,7 @@
+ import { defineFormatter } from './formatter.js';
+ import { formatTransaction } from './transaction.js';
+ export function formatBlock(block) {
+-    const transactions = block.transactions?.map((transaction) => {
++    const transactions = block.transactions && block.transactions.map((transaction) => {
+         if (typeof transaction === 'string')
+             return transaction;
+         return formatTransaction(transaction);
+diff --git a/node_modules/viem/dist/esm/utils/formatters/extract.js b/node_modules/viem/dist/esm/utils/formatters/extract.js
+index 4202d3d..0f2b80a 100644
+--- a/node_modules/viem/dist/esm/utils/formatters/extract.js
++++ b/node_modules/viem/dist/esm/utils/formatters/extract.js
+@@ -7,7 +7,7 @@ export function extract(value, { format }) {
+     const keys = Object.keys(format({}));
+     return keys.reduce((data, key) => {
+         // rome-ignore lint/suspicious/noPrototypeBuiltins:
+-        if (value?.hasOwnProperty(key)) {
++        if (value && value.hasOwnProperty(key)) {
+             data[key] = value[key];
+         }
+         return data;
+diff --git a/node_modules/viem/dist/esm/utils/formatters/feeHistory.js b/node_modules/viem/dist/esm/utils/formatters/feeHistory.js
+index 651e5b1..87ea7f2 100644
+--- a/node_modules/viem/dist/esm/utils/formatters/feeHistory.js
++++ b/node_modules/viem/dist/esm/utils/formatters/feeHistory.js
+@@ -3,7 +3,7 @@ export function formatFeeHistory(feeHistory) {
+         baseFeePerGas: feeHistory.baseFeePerGas.map((value) => BigInt(value)),
+         gasUsedRatio: feeHistory.gasUsedRatio,
+         oldestBlock: BigInt(feeHistory.oldestBlock),
+-        reward: feeHistory.reward?.map((reward) => reward.map((value) => BigInt(value))),
++        reward: feeHistory.reward && feeHistory.reward.map((reward) => reward.map((value) => BigInt(value))),
+     };
+ }
+ //# sourceMappingURL=feeHistory.js.map
+diff --git a/node_modules/viem/dist/esm/utils/observe.js b/node_modules/viem/dist/esm/utils/observe.js
+index f8bd052..6d5df2d 100644
+--- a/node_modules/viem/dist/esm/utils/observe.js
++++ b/node_modules/viem/dist/esm/utils/observe.js
+@@ -32,7 +32,7 @@ export function observe(observerId, callbacks, fn) {
+             const listeners = getListeners();
+             if (listeners.length === 0)
+                 return;
+-            listeners.forEach((listener) => listener.fns[key]?.(...args));
++            listeners.forEach((listener) => listener.fns[key] && listener.fns[key](...args));
+         });
+     }
+     const cleanup = fn(emit);
+diff --git a/node_modules/viem/dist/esm/utils/poll.js b/node_modules/viem/dist/esm/utils/poll.js
+index 32b6889..4158cff 100644
+--- a/node_modules/viem/dist/esm/utils/poll.js
++++ b/node_modules/viem/dist/esm/utils/poll.js
+@@ -9,7 +9,7 @@ export function poll(fn, { emitOnBegin, initialWaitTime, interval }) {
+         let data;
+         if (emitOnBegin)
+             data = await fn({ unpoll: unwatch });
+-        const initialWait = (await initialWaitTime?.(data)) ?? interval;
++        const initialWait = (await (initialWaitTime && initialWaitTime(data))) || interval;
+         await wait(initialWait);
+         const poll = async () => {
+             if (!active)
+diff --git a/node_modules/viem/dist/esm/utils/promise/createBatchScheduler.js b/node_modules/viem/dist/esm/utils/promise/createBatchScheduler.js
+index b97badc..090491c 100644
+--- a/node_modules/viem/dist/esm/utils/promise/createBatchScheduler.js
++++ b/node_modules/viem/dist/esm/utils/promise/createBatchScheduler.js
+@@ -8,10 +8,10 @@ export function createBatchScheduler({ fn, id, shouldSplitBatch, wait = 0, }) {
+             return;
+         fn(args)
+             .then((data) => {
+-            scheduler.forEach(({ pendingPromise }, i) => pendingPromise.resolve?.([data[i], data]));
++            scheduler.forEach(({ pendingPromise }, i) => pendingPromise.resolve && pendingPromise.resolve([data[i], data]));
+         })
+             .catch((err) => {
+-            scheduler.forEach(({ pendingPromise }) => pendingPromise.reject?.(err));
++            scheduler.forEach(({ pendingPromise }) => pendingPromise.reject && pendingPromise.reject(err));
+         });
+     };
+     const flush = () => schedulerCache.delete(id);
+@@ -26,7 +26,7 @@ export function createBatchScheduler({ fn, id, shouldSplitBatch, wait = 0, }) {
+                 pendingPromise.resolve = resolve;
+                 pendingPromise.reject = reject;
+             });
+-            const split = shouldSplitBatch?.([...getBatchedArgs(), args]);
++            const split = shouldSplitBatch && shouldSplitBatch([...getBatchedArgs(), args]);
+             if (split)
+                 exec();
+             const hasActiveScheduler = getScheduler().length > 0;
+diff --git a/node_modules/viem/dist/esm/utils/promise/withTimeout.js b/node_modules/viem/dist/esm/utils/promise/withTimeout.js
+index 08e6f72..70be29b 100644
+--- a/node_modules/viem/dist/esm/utils/promise/withTimeout.js
++++ b/node_modules/viem/dist/esm/utils/promise/withTimeout.js
+@@ -15,7 +15,7 @@ export function withTimeout(fn, { errorInstance, timeout, signal, }) {
+                         }
+                     }, timeout);
+                 }
+-                resolve(await fn({ signal: controller?.signal }));
++                resolve(await fn({ signal: controller && controller.signal }));
+             }
+             catch (err) {
+                 if (err.name === 'AbortError')
+diff --git a/node_modules/viem/dist/esm/utils/rpc.js b/node_modules/viem/dist/esm/utils/rpc.js
+index 68eab58..1d2a428 100644
+--- a/node_modules/viem/dist/esm/utils/rpc.js
++++ b/node_modules/viem/dist/esm/utils/rpc.js
+@@ -30,7 +30,7 @@ async function http(url, { body, fetchOptions = {}, timeout = 10000 }) {
+             signal: true,
+         });
+         let data;
+-        if (response.headers.get('Content-Type')?.startsWith('application/json')) {
++        if (response.headers.get('Content-Type') && response.headers.get('Content-Type').startsWith('application/json')) {
+             data = await response.json();
+         }
+         else {
+@@ -74,8 +74,8 @@ export async function getSocket(url_) {
+             // Workaround for Vite.
+             // https://github.com/vitejs/vite/issues/9703
+             // TODO: Remove when issue is resolved.
+-            if (WebSocket.default
+-                ?.constructor)
++            if (WebSocket.default && WebSocket.default
++                .constructor)
+                 WebSocket = WebSocket
+                     .default;
+             else
+@@ -138,7 +138,7 @@ function webSocket(socket, { body, onResponse }) {
+         const message = JSON.parse(data);
+         if (typeof message.id === 'number' && id_ !== message.id)
+             return;
+-        onResponse?.(message);
++        onResponse && onResponse(message);
+         // If we are subscribing to a topic, we want to set up a listener for incoming
+         // messages.
+         if (body.method === 'eth_subscribe' && typeof message.result === 'string') {
+@@ -146,7 +146,7 @@ function webSocket(socket, { body, onResponse }) {
+         }
+         // If we are unsubscribing from a topic, we want to remove the listener.
+         if (body.method === 'eth_unsubscribe') {
+-            socket.subscriptions.delete(body.params?.[0]);
++            socket.subscriptions.delete(body.params && body.params[0]);
+         }
+     };
+     socket.requests.set(id_, callback);
+diff --git a/node_modules/viem/dist/esm/utils/signature/hashTypedData.js b/node_modules/viem/dist/esm/utils/signature/hashTypedData.js
+index 101e607..6d41ef1 100644
+--- a/node_modules/viem/dist/esm/utils/signature/hashTypedData.js
++++ b/node_modules/viem/dist/esm/utils/signature/hashTypedData.js
+@@ -8,17 +8,17 @@ export function hashTypedData({ domain: domain_, message, primaryType, types: ty
+     const domain = typeof domain_ === 'undefined' ? {} : domain_;
+     const types = {
+         EIP712Domain: [
+-            typeof domain?.name === 'string' && { name: 'name', type: 'string' },
+-            domain?.version && { name: 'version', type: 'string' },
+-            typeof domain?.chainId === 'number' && {
++            typeof (domain && domain.name === 'string') && { name: 'name', type: 'string' },
++            (domain && domain.version) && { name: 'version', type: 'string' },
++            typeof (domain && domain.chainId) === 'number' && {
+                 name: 'chainId',
+                 type: 'uint256',
+             },
+-            domain?.verifyingContract && {
++            domain && domain.verifyingContract && {
+                 name: 'verifyingContract',
+                 type: 'address',
+             },
+-            domain?.salt && { name: 'salt', type: 'bytes32' },
++            domain && domain.salt && { name: 'salt', type: 'bytes32' },
+         ].filter(Boolean),
+         ...types_,
+     };
+@@ -93,7 +93,7 @@ function encodeType({ primaryType, types, }) {
+ }
+ function findTypeDependencies({ primaryType: primaryType_, types, }, results = new Set()) {
+     const match = primaryType_.match(/^\w*/u);
+-    const primaryType = match?.[0];
++    const primaryType = match && match[0];
+     if (results.has(primaryType) || types[primaryType] === undefined) {
+         return results;
+     }
+diff --git a/node_modules/viem/dist/esm/utils/transaction/prepareRequest.js b/node_modules/viem/dist/esm/utils/transaction/prepareRequest.js
+index 4468982..fbdb46d 100644
+--- a/node_modules/viem/dist/esm/utils/transaction/prepareRequest.js
++++ b/node_modules/viem/dist/esm/utils/transaction/prepareRequest.js
+@@ -25,7 +25,7 @@ export async function prepareRequest(client, args) {
+         // EIP-1559 fees
+         if (typeof maxFeePerGas === 'undefined') {
+             // Set a buffer of 1.2x on top of the base fee to account for fluctuations.
+-            request.maxPriorityFeePerGas = maxPriorityFeePerGas ?? defaultTip;
++            request.maxPriorityFeePerGas = maxPriorityFeePerGas || defaultTip;
+             request.maxFeePerGas =
+                 (block.baseFeePerGas * 120n) / 100n + request.maxPriorityFeePerGas;
+         }
+@@ -34,7 +34,7 @@ export async function prepareRequest(client, args) {
+                 maxFeePerGas < defaultTip)
+                 throw new BaseError('`maxFeePerGas` cannot be less than the default `maxPriorityFeePerGas` (1.5 gwei).');
+             request.maxFeePerGas = maxFeePerGas;
+-            request.maxPriorityFeePerGas = maxPriorityFeePerGas ?? defaultTip;
++            request.maxPriorityFeePerGas = maxPriorityFeePerGas || defaultTip;
+         }
+     }
+     else {
+diff --git a/node_modules/viem/dist/esm/utils/transaction/serializeTransaction.js b/node_modules/viem/dist/esm/utils/transaction/serializeTransaction.js
+index 85eb26b..cf079a0 100644
+--- a/node_modules/viem/dist/esm/utils/transaction/serializeTransaction.js
++++ b/node_modules/viem/dist/esm/utils/transaction/serializeTransaction.js
+@@ -24,9 +24,9 @@ function serializeTransactionEIP1559(transaction, signature) {
+         maxPriorityFeePerGas ? toHex(maxPriorityFeePerGas) : '0x',
+         maxFeePerGas ? toHex(maxFeePerGas) : '0x',
+         gas ? toHex(gas) : '0x',
+-        to ?? '0x',
++        to || '0x',
+         value ? toHex(value) : '0x',
+-        data ?? '0x',
++        data || '0x',
+         serializedAccessList,
+     ];
+     if (signature)
+@@ -46,9 +46,9 @@ function serializeTransactionEIP2930(transaction, signature) {
+         nonce ? toHex(nonce) : '0x',
+         gasPrice ? toHex(gasPrice) : '0x',
+         gas ? toHex(gas) : '0x',
+-        to ?? '0x',
++        to || '0x',
+         value ? toHex(value) : '0x',
+-        data ?? '0x',
++        data || '0x',
+         serializedAccessList,
+     ];
+     if (signature)
+@@ -66,9 +66,9 @@ function serializeTransactionLegacy(transaction, signature) {
+         nonce ? toHex(nonce) : '0x',
+         gasPrice ? toHex(gasPrice) : '0x',
+         gas ? toHex(gas) : '0x',
+-        to ?? '0x',
++        to || '0x',
+         value ? toHex(value) : '0x',
+-        data ?? '0x',
++        data || '0x',
+     ];
+     if (signature) {
+         let v = 27n + (signature.v === 27n ? 0n : 1n);
+diff --git a/node_modules/viem/src/utils/ccip.ts b/node_modules/viem/src/utils/ccip.ts
+index 4659310..ff88e9f 100644
+--- a/node_modules/viem/src/utils/ccip.ts
++++ b/node_modules/viem/src/utils/ccip.ts
+@@ -126,7 +126,7 @@ export async function ccipFetch({
+ 
+       let result
+       if (
+-        response.headers.get('Content-Type')?.startsWith('application/json')
++          response.headers.get('Content-Type')?.startsWith('application/json')
+       ) {
+         result = (await response.json()).data
+       } else {

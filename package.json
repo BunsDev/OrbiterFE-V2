@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=local vue-cli-service serve",
     "build:rinkeby": "cross-env NODE_ENV=development npm run clear && vue-cli-service build",
-    "build": "cross-env NODE_ENV=production npm run clear && vue-cli-service build",
+    "build": "patch-package && cross-env NODE_ENV=production npm run clear && vue-cli-service build",
     "clear": "rimraf ./dist",
     "lint": "eslint --ext .js --ext .jsx src/",
     "lint-fix": "eslint --fix --ext .js --ext .jsx src/",
     "prettier": "prettier --check --write --config .prettierrc.json 'src/*.{vue,js}'",
     "prepare": "husky install",
-    "report": "npm run build -- --report"
+    "report": "npm run build -- --report",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@dydxprotocol/starkex-lib": "^1.1.6",
@@ -49,6 +50,7 @@
     "https": "^1.0.0",
     "husky": "^8.0.3",
     "numeral": "^2.0.6",
+    "patch-package": "^8.0.0",
     "rlp": "^3.0.0",
     "starknet": "^3.10.0",
     "truffle-privatekey-provider": "^1.5.0",

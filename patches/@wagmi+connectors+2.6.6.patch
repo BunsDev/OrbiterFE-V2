@@ -1,0 +1,214 @@
+diff --git a/node_modules/@wagmi/connectors/dist/chunk-QRUHVNWK.js b/node_modules/@wagmi/connectors/dist/chunk-QRUHVNWK.js
+index 5c315b0..013fa5d 100644
+--- a/node_modules/@wagmi/connectors/dist/chunk-QRUHVNWK.js
++++ b/node_modules/@wagmi/connectors/dist/chunk-QRUHVNWK.js
+@@ -110,7 +110,7 @@ function getInjectedName(ethereum) {
+     if (provider.isMetaMask)
+       return "MetaMask";
+   };
+-  if (ethereum.providers?.length) {
++  if (ethereum.providers && ethereum.providers.length) {
+     const nameSet = /* @__PURE__ */ new Set();
+     let unknownCount = 1;
+     for (const provider of ethereum.providers) {
+@@ -124,9 +124,9 @@ function getInjectedName(ethereum) {
+     const names = [...nameSet];
+     if (names.length)
+       return names;
+-    return names[0] ?? "Injected";
++    return names[0] || "Injected";
+   }
+-  return getName(ethereum) ?? "Injected";
++  return getName(ethereum) || "Injected";
+ }
+ 
+ // src/injected.ts
+@@ -142,7 +142,7 @@ var InjectedConnector = class extends Connector {
+         if (typeof window === "undefined")
+           return;
+         const ethereum = window.ethereum;
+-        if (ethereum?.providers)
++        if (ethereum && ethereum.providers)
+           return ethereum.providers[0];
+         return ethereum;
+       },
+@@ -178,7 +178,7 @@ var InjectedConnector = class extends Connector {
+       }
+       this.emit("disconnect");
+       if (this.options.shimDisconnect)
+-        this.storage?.removeItem(this.shimDisconnectKey);
++        this.storage && this.storage.removeItem(this.shimDisconnectKey);
+     });
+     const provider = options.getProvider();
+     if (typeof options.name === "string")
+@@ -220,7 +220,7 @@ var InjectedConnector = class extends Connector {
+         unsupported = this.isChainUnsupported(id);
+       }
+       if (this.options.shimDisconnect)
+-        this.storage?.setItem(this.shimDisconnectKey, true);
++        this.storage && this.storage.setItem(this.shimDisconnectKey, true);
+       return { account, chain: { id, unsupported } };
+     } catch (error) {
+       if (this.isUserRejectedRequestError(error))
+@@ -232,13 +232,13 @@ var InjectedConnector = class extends Connector {
+   }
+   async disconnect() {
+     const provider = await this.getProvider();
+-    if (!provider?.removeListener)
++    if (!(provider && provider.removeListener))
+       return;
+     provider.removeListener("accountsChanged", this.onAccountsChanged);
+     provider.removeListener("chainChanged", this.onChainChanged);
+     provider.removeListener("disconnect", this.onDisconnect);
+     if (this.options.shimDisconnect)
+-      this.storage?.removeItem(this.shimDisconnectKey);
++      this.storage && this.storage.removeItem(this.shimDisconnectKey);
+   }
+   async getAccount() {
+     const provider = await this.getProvider();
+@@ -279,7 +279,7 @@ var InjectedConnector = class extends Connector {
+   }
+   async isAuthorized() {
+     try {
+-      if (this.options.shimDisconnect && !this.storage?.getItem(this.shimDisconnectKey))
++      if (this.options.shimDisconnect && !(this.storage && this.storage.getItem(this.shimDisconnectKey)))
+         return false;
+       const provider = await this.getProvider();
+       if (!provider)
+@@ -303,12 +303,12 @@ var InjectedConnector = class extends Connector {
+         }),
+         new Promise(
+           (res) => this.on("change", ({ chain }) => {
+-            if (chain?.id === chainId)
++            if (chain && chain.id === chainId)
+               res();
+           })
+         )
+       ]);
+-      return this.chains.find((x) => x.id === chainId) ?? {
++      return this.chains.find((x) => x.id === chainId) || {
+         id: chainId,
+         name: `Chain ${id}`,
+         network: `${id}`,
+@@ -322,7 +322,7 @@ var InjectedConnector = class extends Connector {
+           chainId,
+           connectorId: this.id
+         });
+-      if (error.code === 4902 || error?.data?.originalError?.code === 4902) {
++      if (error.code === 4902 || (error && error.data && error.data.originalError && error.data.originalError.code === 4902)) {
+         try {
+           await provider.request({
+             method: "wallet_addEthereumChain",
+@@ -331,7 +331,7 @@ var InjectedConnector = class extends Connector {
+                 chainId: id,
+                 chainName: chain.name,
+                 nativeCurrency: chain.nativeCurrency,
+-                rpcUrls: [chain.rpcUrls.public?.http[0] ?? ""],
++                rpcUrls: [(chain.rpcUrls.public && chain.rpcUrls.public.http[0]) || ""],
+                 blockExplorerUrls: this.getBlockExplorerUrls(chain)
+               }
+             ]
+diff --git a/node_modules/@wagmi/connectors/dist/chunk-QYMCVNHT.js b/node_modules/@wagmi/connectors/dist/chunk-QYMCVNHT.js
+index 1d31fdb..4c5d74a 100644
+--- a/node_modules/@wagmi/connectors/dist/chunk-QYMCVNHT.js
++++ b/node_modules/@wagmi/connectors/dist/chunk-QYMCVNHT.js
+@@ -43,7 +43,7 @@ var Connector = class extends EventEmitter {
+     this.options = options;
+   }
+   getBlockExplorerUrls(chain) {
+-    const { default: blockExplorer, ...blockExplorers } = chain.blockExplorers ?? {};
++    const { default: blockExplorer, ...blockExplorers } = chain.blockExplorers || {};
+     if (blockExplorer)
+       return [
+         blockExplorer.url,
+diff --git a/node_modules/@wagmi/connectors/dist/walletConnect.js b/node_modules/@wagmi/connectors/dist/walletConnect.js
+index 63167e8..68c3ba5 100644
+--- a/node_modules/@wagmi/connectors/dist/walletConnect.js
++++ b/node_modules/@wagmi/connectors/dist/walletConnect.js
+@@ -69,12 +69,12 @@ var WalletConnectConnector = class extends Connector {
+     try {
+       let targetChainId = chainId;
+       if (!targetChainId) {
+-        const store = this.storage?.getItem(STORE_KEY);
+-        const lastUsedChainId = store?.state?.data?.chain?.id;
++        const store = this.storage && this.storage.getItem(STORE_KEY);
++        const lastUsedChainId = store && store.state && store.state.data && store.state.data.chain && store.state.data.chain.id;
+         if (lastUsedChainId && !this.isChainUnsupported(lastUsedChainId))
+           targetChainId = lastUsedChainId;
+         else
+-          targetChainId = this.chains[0]?.id;
++          targetChainId = this.chains[0] && this.chains[0].id;
+       }
+       if (!targetChainId)
+         throw new Error("No chains found on connector.");
+@@ -102,7 +102,7 @@ var WalletConnectConnector = class extends Connector {
+         chain: { id, unsupported }
+       };
+     } catch (error) {
+-      if (/user rejected/i.test(error?.message)) {
++      if (/user rejected/i.test(error && error.message)) {
+         throw new UserRejectedRequestError(error);
+       }
+       throw error;
+@@ -187,7 +187,7 @@ var WalletConnectConnector = class extends Connector {
+           params: [
+             {
+               chainId: numberToHex(chain.id),
+-              blockExplorerUrls: [chain.blockExplorers?.default?.url],
++              blockExplorerUrls: [chain.blockExplorers && chain.blockExplorers.default && chain.blockExplorers.default.url],
+               chainName: chain.name,
+               nativeCurrency: chain.nativeCurrency,
+               rpcUrls: [...chain.rpcUrls.default.http]
+@@ -204,7 +204,7 @@ var WalletConnectConnector = class extends Connector {
+       });
+       return chain;
+     } catch (error) {
+-      const message = typeof error === "string" ? error : error?.message;
++      const message = typeof error === "string" ? error : (error && error.message);
+       if (/user rejected request/i.test(message)) {
+         throw new UserRejectedRequestError(error);
+       }
+@@ -291,35 +291,35 @@ removeListeners_fn = function() {
+ };
+ _setRequestedChainsIds = new WeakSet();
+ setRequestedChainsIds_fn = function(chains) {
+-  this.storage?.setItem(REQUESTED_CHAINS_KEY, chains);
++  this.storage && this.storage.setItem(REQUESTED_CHAINS_KEY, chains);
+ };
+ _getRequestedChainsIds = new WeakSet();
+ getRequestedChainsIds_fn = function() {
+-  return this.storage?.getItem(REQUESTED_CHAINS_KEY) ?? [];
++  return (this.storage && this.storage.getItem(REQUESTED_CHAINS_KEY)) || [];
+ };
+ _getNamespaceChainsIds = new WeakSet();
+ getNamespaceChainsIds_fn = function() {
+   if (!__privateGet(this, _provider))
+     return [];
+-  const namespaces = __privateGet(this, _provider).session?.namespaces;
++  const namespaces = __privateGet(this, _provider).session && __privateGet(this, _provider).session.namespaces;
+   if (!namespaces)
+     return [];
+   const normalizedNamespaces = normalizeNamespaces(namespaces);
+-  const chainIds = normalizedNamespaces[NAMESPACE]?.chains?.map(
++  const chainIds = normalizedNamespaces[NAMESPACE] && normalizedNamespaces[NAMESPACE].chains && normalizedNamespaces[NAMESPACE].chains.map(
+     (chain) => parseInt(chain.split(":")[1] || "")
+   );
+-  return chainIds ?? [];
++  return chainIds || [];
+ };
+ _getNamespaceMethods = new WeakSet();
+ getNamespaceMethods_fn = function() {
+   if (!__privateGet(this, _provider))
+     return [];
+-  const namespaces = __privateGet(this, _provider).session?.namespaces;
++  const namespaces = __privateGet(this, _provider).session && __privateGet(this, _provider).session.namespaces;
+   if (!namespaces)
+     return [];
+   const normalizedNamespaces = normalizeNamespaces(namespaces);
+-  const methods = normalizedNamespaces[NAMESPACE]?.methods;
+-  return methods ?? [];
++  const methods = normalizedNamespaces[NAMESPACE] && normalizedNamespaces[NAMESPACE].methods;
++  return methods || [];
+ };
+ export {
+   WalletConnectConnector
